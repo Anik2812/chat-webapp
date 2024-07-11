@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Chat App</title>
+    <title>NeXtChat - Advanced Messaging Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
+    <div id="app" style="display: none;">
         <aside id="sidebar">
             <div id="user-profile">
                 <img src="https://via.placeholder.com/50" alt="Profile" id="profile-pic">
@@ -19,31 +19,44 @@
                 <button id="chatBtn" class="active"><i class="fas fa-comments"></i> Chats</button>
                 <button id="groupsBtn"><i class="fas fa-users"></i> Groups</button>
                 <button id="storiesBtn"><i class="fas fa-book-open"></i> Stories</button>
+                <button id="exploreBtn"><i class="fas fa-compass"></i> Explore</button>
                 <button id="settingsBtn"><i class="fas fa-cog"></i> Settings</button>
             </nav>
+            <div id="online-users">
+                <h3>Online Friends</h3>
+                <ul id="online-users-list"></ul>
+            </div>
         </aside>
         <main>
             <header>
-                <h1>ChatApp</h1>
+                <h1>NeXtChat</h1>
                 <div id="search-bar">
-                    <input type="text" placeholder="Search...">
+                    <input type="text" placeholder="Search..." id="search-input">
                     <i class="fas fa-search"></i>
                 </div>
+                <div id="user-actions">
+                    <button id="notificationsBtn"><i class="fas fa-bell"></i></button>
+                    <button id="newChatBtn"><i class="fas fa-plus"></i></button>
+                </div>
             </header>
-            <div id="content-area">
-                <!-- Content will be dynamically loaded here -->
-            </div>
+            <div id="content-area"></div>
         </main>
     </div>
     <div id="auth-modal" class="modal">
         <div class="modal-content">
-            <h2>Welcome to ChatApp</h2>
+            <h2>Welcome to NeXtChat</h2>
             <form id="loginForm">
                 <input type="text" id="loginUsername" placeholder="Username" required>
                 <input type="password" id="loginPassword" placeholder="Password" required>
                 <button type="submit">Login</button>
             </form>
             <p>Don't have an account? <a href="#" id="showRegister">Register</a></p>
+        </div>
+    </div>
+    <div id="notification-modal" class="modal">
+        <div class="modal-content">
+            <h2>Notifications</h2>
+            <ul id="notification-list"></ul>
         </div>
     </div>
     <script src="app.js"></script>
