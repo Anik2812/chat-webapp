@@ -1,24 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap');
+
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #45a049;
+    --background-color: #f0f0f0;
+    --text-color: #333;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Roboto', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f0f0f0;
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
 
 #app {
-    max-width: 800px;
-    margin: 0 auto;
-    background-color: white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
 }
 
 header {
-    background-color: #4CAF50;
+    background-color: var(--primary-color);
     color: white;
     padding: 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 nav button {
@@ -28,12 +38,36 @@ nav button {
     padding: 0.5rem 1rem;
     margin-left: 0.5rem;
     cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+nav button:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+main {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+#sidebar {
+    width: 250px;
+    background-color: #fff;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
 }
 
 #chatArea {
-    height: 70vh;
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
+}
+
+#chatHeader {
+    background-color: #f8f8f8;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
 }
 
 #messageList {
@@ -45,17 +79,102 @@ nav button {
 #messageForm {
     display: flex;
     padding: 1rem;
+    background-color: #fff;
+    border-top: 1px solid #ddd;
 }
 
 #messageInput {
     flex-grow: 1;
     padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    margin-right: 0.5rem;
 }
 
 #messageForm button {
-    background-color: #4CAF50;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     padding: 0.5rem 1rem;
     cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+#messageForm button:hover {
+    background-color: var(--secondary-color);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#authForms {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: var(--background-color);
+}
+
+#loginForm, #registerForm {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin: 0 1rem;
+}
+
+#loginForm h2, #registerForm h2 {
+    margin-top: 0;
+    color: var(--primary-color);
+}
+
+#loginForm input, #registerForm input {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+#loginForm button, #registerForm button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    width: 100%;
+    border-radius: 3px;
+    transition: background-color 0.3s;
+}
+
+#loginForm button:hover, #registerForm button:hover {
+    background-color: var(--secondary-color);
 }
