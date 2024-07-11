@@ -46,10 +46,14 @@ async function login(username, password) {
         token = data.token;
         localStorage.setItem('token', token);
         currentUser = data.user;
-        hideAuthModal();
-        updateUI();
-        loadChats();
-        initializeSocket();
+        if (currentUser) {
+            hideAuthModal();
+            updateUI();
+            loadChats();
+            initializeSocket();
+        } else {
+            throw new Error('User data not received');
+        }
     } catch (error) {
         console.error('Login error:', error);
         alert('Login failed. Please try again.');
@@ -201,26 +205,53 @@ function attachMessageFormListener(chatId) {
 
 async function loadGroups() {
     try {
-        const groups = await apiCall('/groups');
-        contentArea.innerHTML = `
-            <h2>Your Groups</h2>
-            <div class="group-list">
-                ${groups.map(group => `
-                    <div class="group-item" data-group-id="${group.id}">
-                        <img src="${group.avatar}" alt="${group.name}">
-                        <h3>${group.name}</h3>
-                        <p>Members: ${group.memberCount}</p>
-                    </div>
-                `).join('')}
-            </div>
-            <button id="create-group-btn" class="create-btn">Create New Group</button>
-        `;
-        setActiveNavButton(groupsBtn);
-        attachGroupListeners();
-    } catch (error) {
-        console.error('Error loading groups:', error);
-        contentArea.innerHTML = '<p>Failed to load groups. Please try again later.</p>';
-    }
+        
+        // const groups = await apiCall('/groups');
+    //     contentArea.innerHTML = `
+    //         <h2>Your Groups</h2>
+    //         <div class="group-list">
+    //             ${groups.map(group => `
+    //                 <div class="group-item" data-group-id="${group.id}">
+    //                     <img src="${group.avatar}" alt="${group.name}">
+    //                     <h3>${group.name}</h3>
+    //                     <p>Members: ${group.memberCount}</p>
+    //                 </div>
+    //             `).join('')}
+    //         </div>
+    //         <button id="create-group-btn" class="create-btn">Create New Group</button>
+    //     `;
+    //     setActiveNavButton(groupsBtn);
+    //     attachGroupListeners();
+    // } catch (error) {
+    //     console.error('Error loading groups:', error);
+    //     contentArea.innerHTML = '<p>Failed to load groups. Please try again later.</p>';
+    // }
+    const groups = [
+        { id: 1, name: 'Group 1', avatar: 'https://via.placeholder.com/50', memberCount: 5 },
+        { id: 2, name: 'Group 2', avatar: 'https://via.placeholder.com/50', memberCount: 3 }
+    ];
+
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <h2>Your Groups</h2>
+        <div class="group-list">
+            ${groups.map(group => `
+                <div class="group-item" data-group-id="${group.id}">
+                    <img src="${group.avatar}" alt="${group.name}">
+                    <h3>${group.name}</h3>
+                    <p>Members: ${group.memberCount}</p>
+                </div>
+            `).join('')}
+        </div>
+        <button id="create-group-btn" class="create-btn">Create New Group</button>
+    `;
+    setActiveNavButton(document.getElementById('groups-btn'));
+    attachGroupListeners();
+} catch (error) {
+    console.error('Error loading groups:', error);
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<p>Failed to load groups. Please try again later.</p>';
+}
 }
 
 function attachGroupListeners() {
@@ -340,13 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileBtn = document.getElementById('profile-btn');
     const settingsBtn = document.getElementById('settings-btn');
 
-    console.log('loginForm:', loginForm);
-    console.log('registerForm:', registerForm);
-    console.log('logoutBtn:', logoutBtn);
-    console.log('chatBtn:', chatBtn);
-    console.log('groupsBtn:', groupsBtn);
-    console.log('profileBtn:', profileBtn);
-    console.log('settingsBtn:', settingsBtn);
 
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
@@ -412,19 +436,21 @@ document.getElementById('profile-btn').addEventListener('click', loadProfile);
 document.getElementById('settings-btn').addEventListener('click', loadSettings);
 
 function loadProfile() {
+    const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <h2>Your Profile</h2>
         <p>Username: ${currentUser.username}</p>
         <p>Email: ${currentUser.email}</p>
         <button id="edit-profile-btn">Edit Profile</button>
     `;
-    setActiveNavButton(profileBtn);
+    setActiveNavButton(document.getElementById('profile-btn'));
 }
 
 function loadSettings() {
+    const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <h2>Settings</h2>
         <p>Coming soon...</p>
     `;
-    setActiveNavButton(settingsBtn);
+    setActiveNavButton(document.getElementById('settings-btn'));
 }
