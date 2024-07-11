@@ -1,35 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
     const app = document.getElementById('app');
-    const authForms = document.getElementById('authForms');
+    const authModal = document.getElementById('auth-modal');
     const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const messageForm = document.getElementById('messageForm');
-    const messageInput = document.getElementById('messageInput');
-    const messageList = document.getElementById('messageList');
-    const profileBtn = document.getElementById('profileBtn');
+    const showRegisterLink = document.getElementById('showRegister');
+    const chatBtn = document.getElementById('chatBtn');
     const groupsBtn = document.getElementById('groupsBtn');
     const storiesBtn = document.getElementById('storiesBtn');
-    const modal = document.getElementById('modal');
-    const modalContent = document.getElementById('modalContent');
-    const closeModal = document.querySelector('.close');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const contentArea = document.getElementById('content-area');
 
     let token = localStorage.getItem('token');
     let currentUser = null;
 
-    function showAuthForms() {
-        authForms.style.display = 'flex';
+    function showAuthModal() {
+        authModal.style.display = 'block';
         app.style.display = 'none';
     }
 
-    function showApp() {
-        authForms.style.display = 'none';
+    function hideAuthModal() {
+        authModal.style.display = 'none';
         app.style.display = 'flex';
     }
 
     if (!token) {
-        showAuthForms();
+        showAuthModal();
     } else {
-        showApp();
+        hideAuthModal();
         fetchCurrentUser();
     }
 
@@ -38,122 +34,128 @@ document.addEventListener('DOMContentLoaded', () => {
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await response.json();
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-                showApp();
-                fetchCurrentUser();
-            }
+            // Simulating login for demo purposes
+            token = 'fake_token';
+            localStorage.setItem('token', token);
+            currentUser = { username: username };
+            hideAuthModal();
+            updateUI();
         } catch (error) {
             console.error('Error logging in:', error);
         }
     });
 
-    registerForm.addEventListener('submit', async (e) => {
+    showRegisterLink.addEventListener('click', (e) => {
         e.preventDefault();
-        const username = document.getElementById('registerUsername').value;
-        const password = document.getElementById('registerPassword').value;
-        try {
-            const response = await fetch('http://localhost:5000/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }),
-            });
-            const data = await response.json();
-            if (data.message === 'User created successfully') {
-                alert('Registration successful. Please log in.');
-            }
-        } catch (error) {
-            console.error('Error registering:', error);
-        }
+        // Show registration form (not implemented in this demo)
+        alert('Registration form would appear here');
     });
-
-    messageForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const message = messageInput.value.trim();
-        if (message) {
-            addMessage(currentUser.username, message);
-            messageInput.value = '';
-            // Here, you would typically send the message to a server
-            // For now, we'll just simulate a response
-            setTimeout(() => {
-                addMessage('Bot', 'This is a simulated response.');
-            }, 1000);
-        }
-    });
-
-    function addMessage(sender, text) {
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message');
-        messageElement.innerHTML = `<strong>${sender}:</strong> ${text}`;
-        messageList.appendChild(messageElement);
-        messageList.scrollTop = messageList.scrollHeight;
-    }
-
-    async function fetchCurrentUser() {
-        try {
-            const response = await fetch('http://localhost:5000/api/users/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            currentUser = await response.json();
-            updateUI();
-        } catch (error) {
-            console.error('Error fetching current user:', error);
-        }
-    }
 
     function updateUI() {
-        // Update UI with user information
+        document.getElementById('username').textContent = currentUser.username;
     }
 
-    profileBtn.addEventListener('click', () => {
-        modalContent.innerHTML = `
-            <h2>Profile</h2>
-            <p>Username: ${currentUser.username}</p>
-            <button id="logoutBtn">Logout</button>
+    chatBtn.addEventListener('click', () => loadChats());
+    groupsBtn.addEventListener('click', () => loadGroups());
+    storiesBtn.addEventListener('click', () => loadStories());
+    settingsBtn.addEventListener('click', () => loadSettings());
+
+    function loadChats() {
+        contentArea.innerHTML = `
+            <h2>Chats</h2>
+            <div class="chat-list">
+                <div class="chat-item">
+                    <img src="https://via.placeholder.com/40" alt="User">
+                    <div class="chat-info">
+                        <h3>John Doe</h3>
+                        <p>Hey, how's it going?</p>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <img src="https://via.placeholder.com/40" alt="User">
+                    <div class="chat-info">
+                        <h3>Jane Smith</h3>
+                        <p>Did you see the latest update?</p>
+                    </div>
+                </div>
+            </div>
         `;
-        modal.style.display = 'block';
+    }
+
+    function loadGroups() {
+        contentArea.innerHTML = `
+            <h2>Groups</h2>
+            <div class="group-list">
+                <div class="group-item">
+                    <h3>Tech Talk</h3>
+                    <p>Members: 120</p>
+                </div>
+                <div class="group-item">
+                    <h3>Movie Buffs</h3>
+                    <p>Members: 85</p>
+                </div>
+            </div>
+            <button id="createGroupBtn" class="create-btn">Create New Group</button>
+        `;
+
+        document.getElementById('createGroupBtn').addEventListener('click', () => {
+            // Implement group creation logic here
+            alert('Group creation form would appear here');
+        });
+    }
+
+    function loadStories() {
+        contentArea.innerHTML = `
+            <h2>Stories</h2>
+            <div class="story-list">
+                <div class="story-item">
+                    <img src="https://via.placeholder.com/60" alt="User">
+                    <p>Your Story</p>
+                </div>
+                <div class="story-item">
+                    <img src="https://via.placeholder.com/60" alt="User">
+                    <p>John's Story</p>
+                </div>
+                <div class="story-item">
+                    <img src="https://via.placeholder.com/60" alt="User">
+                    <p>Jane's Story</p>
+                </div>
+            </div>
+            <button id="createStoryBtn" class="create-btn">Create New Story</button>
+        `;
+
+        document.getElementById('createStoryBtn').addEventListener('click', () => {
+            // Implement story creation logic here
+            alert('Story creation interface would appear here');
+        });
+    }
+
+    function loadSettings() {
+        contentArea.innerHTML = `
+            <h2>Settings</h2>
+            <div class="settings-list">
+                <div class="setting-item">
+                    <h3>Account</h3>
+                    <p>Manage your account details</p>
+                </div>
+                <div class="setting-item">
+                    <h3>Privacy</h3>
+                    <p>Control your privacy settings</p>
+                </div>
+                <div class="setting-item">
+                    <h3>Notifications</h3>
+                    <p>Customize your notifications</p>
+                </div>
+            </div>
+            <button id="logoutBtn" class="logout-btn">Logout</button>
+        `;
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             localStorage.removeItem('token');
-            showAuthForms();
-            modal.style.display = 'none';
+            showAuthModal();
         });
-    });
+    }
 
-    groupsBtn.addEventListener('click', () => {
-        modalContent.innerHTML = `
-            <h2>Groups</h2>
-            <ul>
-                <li>General Chat</li>
-                <li>Tech Talk</li>
-                <li>Random</li>
-            </ul>
-            <button id="createGroupBtn">Create New Group</button>
-        `;
-        modal.style.display = 'block';
-    });
-
-    storiesBtn.addEventListener('click', () => {
-        modalContent.innerHTML = `
-            <h2>Stories</h2>
-            <p>Feature coming soon!</p>
-        `;
-        modal.style.display = 'block';
-    });
-
-    closeModal.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
+    // Load chats by default
+    loadChats();
 });
