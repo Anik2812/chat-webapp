@@ -43,25 +43,37 @@ async function login(username, password) {
         });
         if (!response.ok) throw new Error('Login failed');
         const data = await response.json();
+        
+        if (!data.token) {
+            throw new Error('Token not received from server');
+        }
+        
         token = data.token;
         localStorage.setItem('token', token);
-        currentUser = data.user;
-        if (currentUser) {
-            hideAuthModal();
-            updateUI();
-            loadChats();
-            initializeSocket();
-        } else {
-            throw new Error('User data not received');
+        
+        // Assuming the server sends user data with the token
+        if (!data.user) {
+            throw new Error('User data not received from server');
         }
+        
+        currentUser = data.user;
+        // Store user data in localStorage
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        hideAuthModal();
+        updateUI();
+        loadChats();
+        initializeSocket();
     } catch (error) {
         console.error('Login error:', error);
-        alert('Login failed. Please try again.');
+        alert(`Login failed: ${error.message}`);
     }
 }
 
+
 function logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
     token = null;
     currentUser = null;
     if (socket) socket.close();
@@ -86,8 +98,13 @@ async function register(username, password, email) {
 
 async function fetchCurrentUser() {
     try {
-        currentUser = await apiCall('/users/me');
-        updateUI();
+        // If we don't have a /users/me endpoint, we can use the data stored during login
+        if (currentUser) {
+            updateUI();
+        } else {
+            // If currentUser is not set, we need to re-authenticate
+            throw new Error('User data not available. Please log in again.');
+        }
     } catch (error) {
         console.error('Error fetching current user:', error);
         logout();
@@ -422,6 +439,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         showAuthModal();
     }
+
+    token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('currentUser');
+    if (token && storedUser) {
+        currentUser = JSON.parse(storedUser);
+        fetchCurrentUser();
+    } else {
+        showAuthModal();
+    }
+
 });
 
 
@@ -450,7 +477,7 @@ function loadSettings() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <h2>Settings</h2>
-        <p>Coming soon...</p>
+        <p>Coming soon...</p>   
     `;
     setActiveNavButton(document.getElementById('settings-btn'));
 }
