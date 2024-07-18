@@ -195,6 +195,7 @@ async function openChat(chatId) {
     const messageList = document.getElementById('message-list');
     messageList.scrollTop = messageList.scrollHeight;
     attachMessageFormListener(chatId);
+    implementInfiniteScroll(messageList, chatId);
   } catch (error) {
     console.error('Error opening chat:', error);
     const contentArea = document.getElementById('content-area');
@@ -368,6 +369,11 @@ function handleNewMessage(message) {
     messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
     messageList.scrollTop = messageList.scrollHeight;
   }
+  
+  // Show notification for new messages
+  if (message.sender !== currentUser.id) {
+    showNotification('New Message', `${message.senderName}: ${message.content}`);
+  }
 }
 
 function updateOnlineUserStatus(user) {
@@ -403,64 +409,6 @@ function showRegisterForm() {
   document.getElementById('register-form').style.display = 'block';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const loginForm = document.getElementById('login-form');
-  const registerForm = document.getElementById('register-form');
-  const logoutBtn = document.getElementById('logout-btn');
-  const chatBtn = document.getElementById('chat-btn');
-  const groupsBtn = document.getElementById('groups-btn');
-  const profileBtn = document.getElementById('profile-btn');
-  const settingsBtn = document.getElementById('settings-btn');
-  const showRegisterBtn = document.getElementById('showRegister');
-  const showLoginBtn = document.getElementById('showLogin');
-
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = document.getElementById('login-username').value.trim();
-    const password = document.getElementById('login-password').value.trim();
-    if (username && password) {
-      login(username, password);
-    }
-  });
-
-  registerForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = document.getElementById('register-username').value.trim();
-    const password = document.getElementById('register-password').value.trim();
-    const email = document.getElementById('register-email').value.trim();
-    if (username && password && email) {
-      register(username, password, email);
-    }
-  });
-
-  logoutBtn.addEventListener('click', logout);
-  chatBtn.addEventListener('click', loadChats);
-  groupsBtn.addEventListener('click', loadGroups);
-  profileBtn.addEventListener('click', loadProfile);
-  settingsBtn.addEventListener('click', loadSettings);
-  showRegisterBtn.addEventListener('click', showRegisterForm);
-  showLoginBtn.addEventListener('click', showLoginForm);
-
-  // Check if user is already logged in
-  if (token) {
-    const storedUser = localStorage.getItem('currentUser');
-    console.log("No token found, showing auth modal");
-    if (storedUser) {
-      currentUser = JSON.parse(storedUser);
-      hideAuthModal();
-      updateUI();
-      loadChats();
-      initializeSocket();
-    } else {
-        console.log("Token found, attempting to load user data");
-      logout(); // Clear potentially invalid token
-    }
-  } else {
-    console.log("Token found, attempting to load user data");
-    showAuthModal();
-  }
-});
-
 function loadProfile() {
   const contentArea = document.getElementById('content-area');
   contentArea.innerHTML = `
@@ -477,133 +425,212 @@ function loadProfile() {
 }
 
 function loadSettings() {
-  const contentArea = document.getElementById('content-area');
-  contentArea.innerHTML = `
-    <h2>Settings</h2>
-    <div class="settings-options">
-      <div class="setting-item">
-        <label for="dark-mode-toggle">Dark Mode</label>
-        <input type="checkbox" id="dark-mode-toggle">
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+      <h2>Settings</h2>
+      <div class="settings-options">
+        <div class="setting-item">
+          <label for="dark-mode-toggle">Dark Mode</label>
+          <input type="checkbox" id="dark-mode-toggle">
+        </div>
+        <div class="setting-item">
+          <label for="notification-toggle">Enable Notifications</label>
+          <input type="checkbox" id="notification-toggle">
+        </div>
       </div>
-      <div class="setting-item">
-        <label for="notification-toggle">Enable Notifications</label>
-        <input type="checkbox" id="notification-toggle">
-      </div>
-    </div>
-  `;
-  setActiveNavButton(document.getElementById('settings-btn'));
+    `;
+    setActiveNavButton(document.getElementById('settings-btn'));
+    
+    // Add event listeners for settings changes
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    darkModeToggle.checked = localStorage.getItem('darkMode') === 'true';
+    darkModeToggle.addEventListener('change', () => {
+      document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+      localStorage.setItem('darkMode', darkModeToggle.checked);
+    });
   
-  // Add event listeners for settings changes
-  const darkModeToggle = document.getElementById('dark-mode-toggle');
-  darkModeToggle.checked = localStorage.getItem('darkMode') === 'true';
-  darkModeToggle.addEventListener('change', () => {
-    document.body.classList.toggle('dark-mode', darkModeToggle.checked);
-    localStorage.setItem('darkMode', darkModeToggle.checked);
-  });
-
-  const notificationToggle = document.getElementById('notification-toggle');
-  notificationToggle.checked = localStorage.getItem('notifications') === 'true';
-  notificationToggle.addEventListener('change', () => {
-    localStorage.setItem('notifications', notificationToggle.checked);
-    if (notificationToggle.checked) {
-      requestNotificationPermission();
-    }
-  });
-}
-
-function showEditProfileModal() {
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <h2>Edit Profile</h2>
-      <form id="edit-profile-form">
-        <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
-        <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
-        <input type="file" id="edit-avatar" accept="image/*">
-        <button type="submit">Save Changes</button>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.classList.add('show');
-
-  const editProfileForm = document.getElementById('edit-profile-form');
-  editProfileForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('edit-username').value.trim();
-    const email = document.getElementById('edit-email').value.trim();
-    const avatarFile = document.getElementById('edit-avatar').files[0];
-
-    try {
-      showLoadingSpinner();
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('email', email);
-      if (avatarFile) {
-        formData.append('avatar', avatarFile);
-      }
-
-      const response = await fetch(`${API_BASE_URL}/users/profile`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      const updatedUser = await response.json();
-      currentUser = updatedUser;
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-      updateUI();
-      loadProfile();
-      modal.classList.remove('show');
-      setTimeout(() => modal.remove(), 300);
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile. Please try again.');
-    } finally {
-      hideLoadingSpinner();
-    }
-  });
-}
-
-function requestNotificationPermission() {
-  if ('Notification' in window) {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        console.log('Notification permission granted');
+    const notificationToggle = document.getElementById('notification-toggle');
+    notificationToggle.checked = localStorage.getItem('notifications') === 'true';
+    notificationToggle.addEventListener('change', () => {
+      localStorage.setItem('notifications', notificationToggle.checked);
+      if (notificationToggle.checked) {
+        requestNotificationPermission();
       }
     });
   }
-}
-
-function showNotification(title, body) {
-  if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('notifications') === 'true') {
-    new Notification(title, { body });
-  }
-}
-
-// Call this function when receiving a new message
-function handleNewMessage(message) {
-  const messageList = document.getElementById('message-list');
-  if (messageList) {
-    messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
-    messageList.scrollTop = messageList.scrollHeight;
+  
+  function showEditProfileModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h2>Edit Profile</h2>
+        <form id="edit-profile-form">
+          <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
+          <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
+          <input type="file" id="edit-avatar" accept="image/*">
+          <button type="submit">Save Changes</button>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.classList.add('show');
+  
+    const editProfileForm = document.getElementById('edit-profile-form');
+    editProfileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('edit-username').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      const avatarFile = document.getElementById('edit-avatar').files[0];
+  
+      try {
+        showLoadingSpinner();
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('email', email);
+        if (avatarFile) {
+          formData.append('avatar', avatarFile);
+        }
+  
+        const response = await fetch(`${API_BASE_URL}/users/profile`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to update profile');
+        }
+  
+        const updatedUser = await response.json();
+        currentUser = updatedUser;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUI();
+        loadProfile();
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
+      } finally {
+        hideLoadingSpinner();
+      }
+    });
   }
   
-  // Show notification for new messages
-  if (message.sender !== currentUser.id) {
-    showNotification('New Message', `${message.senderName}: ${message.content}`);
+  function requestNotificationPermission() {
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log('Notification permission granted');
+        }
+      });
+    }
   }
-}
-
-// Add this to initialize dark mode on page load
-document.addEventListener('DOMContentLoaded', () => {
+  
+  function showNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('notifications') === 'true') {
+      new Notification(title, { body });
+    }
+  }
+  
+  function implementInfiniteScroll(messageList, chatId) {
+    let page = 1;
+    let loading = false;
+  
+    messageList.addEventListener('scroll', async () => {
+      if (messageList.scrollTop === 0 && !loading) {
+        loading = true;
+        try {
+          const oldMessages = await apiCall(`/chats/${chatId}/messages?page=${page + 1}`);
+          if (oldMessages.length > 0) {
+            page++;
+            const oldMessageElements = oldMessages.map(createMessageElement).join('');
+            messageList.insertAdjacentHTML('afterbegin', oldMessageElements);
+            messageList.scrollTop = 100; // Scroll down a bit to show new content
+          }
+        } catch (error) {
+          console.error('Error loading old messages:', error);
+        } finally {
+          loading = false;
+        }
+      }
+    });
+  }
+  
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }, 100);
+  }
+  
+  function confirmAction(message) {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content">
+          <p>${message}</p>
+          <div class="modal-actions">
+            <button id="confirm-yes">Yes</button>
+            <button id="confirm-no">No</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.classList.add('show');
+  
+      const yesBtn = document.getElementById('confirm-yes');
+      const noBtn = document.getElementById('confirm-no');
+  
+      yesBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+        resolve(true);
+      });
+  
+      noBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+        resolve(false);
+      });
+    });
+  }
+  
+  async function deleteChat(chatId) {
+    const shouldDelete = await confirmAction('Are you sure you want to delete this chat?');
+    if (shouldDelete) {
+      try {
+        await apiCall(`/chats/${chatId}`, 'DELETE');
+        loadChats();
+        showToast('Chat deleted successfully', 'success');
+      } catch (error) {
+        console.error('Error deleting chat:', error);
+        showToast('Failed to delete chat', 'error');
+      }
+    }
+  }
+  
+  window.addEventListener('online', () => {
+    showToast('You are back online', 'success');
+    initializeSocket(); // Reconnect WebSocket
+  });
+  
+  window.addEventListener('offline', () => {
+    showToast('You are offline', 'warning');
+  });
+  
+  document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const logoutBtn = document.getElementById('logout-btn');
@@ -656,144 +683,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       showAuthModal();
     }
-
+  
     // Initialize dark mode
-  const darkMode = localStorage.getItem('darkMode') === 'true';
-  document.body.classList.toggle('dark-mode', darkMode);
-});
-
-// Add these utility functions for enhanced UX
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add('show');
-    setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
-  }, 100);
-}
-
-function confirmAction(message) {
-  return new Promise((resolve) => {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-      <div class="modal-content">
-        <p>${message}</p>
-        <div class="modal-actions">
-          <button id="confirm-yes">Yes</button>
-          <button id="confirm-no">No</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    modal.classList.add('show');
-
-    const yesBtn = document.getElementById('confirm-yes');
-    const noBtn = document.getElementById('confirm-no');
-
-    yesBtn.addEventListener('click', () => {
-      modal.classList.remove('show');
-      setTimeout(() => modal.remove(), 300);
-      resolve(true);
-    });
-
-    noBtn.addEventListener('click', () => {
-      modal.classList.remove('show');
-      setTimeout(() => modal.remove(), 300);
-      resolve(false);
-    });
+    const darkMode = localStorage.getItem('darkMode') === 'true';
+    document.body.classList.toggle('dark-mode', darkMode);
   });
-}
-
-// Example usage of confirmAction
-async function deleteChat(chatId) {
-  const shouldDelete = await confirmAction('Are you sure you want to delete this chat?');
-  if (shouldDelete) {
-    try {
-      await apiCall(`/chats/${chatId}`, 'DELETE');
-      loadChats();
-      showToast('Chat deleted successfully', 'success');
-    } catch (error) {
-      console.error('Error deleting chat:', error);
-      showToast('Failed to delete chat', 'error');
-    }
-  }
-}
-
-// Add this to handle offline/online status
-window.addEventListener('online', () => {
-  showToast('You are back online', 'success');
-  initializeSocket(); // Reconnect WebSocket
-});
-
-window.addEventListener('offline', () => {
-  showToast('You are offline', 'warning');
-});
-
-// Implement infinite scrolling for chat history
-function implementInfiniteScroll(messageList, chatId) {
-  let page = 1;
-  let loading = false;
-
-  messageList.addEventListener('scroll', async () => {
-    if (messageList.scrollTop === 0 && !loading) {
-      loading = true;
-      try {
-        const oldMessages = await apiCall(`/chats/${chatId}/messages?page=${page + 1}`);
-        if (oldMessages.length > 0) {
-          page++;
-          const oldMessageElements = oldMessages.map(createMessageElement).join('');
-          messageList.insertAdjacentHTML('afterbegin', oldMessageElements);
-          messageList.scrollTop = 100; // Scroll down a bit to show new content
-        }
-      } catch (error) {
-        console.error('Error loading old messages:', error);
-      } finally {
-        loading = false;
-      }
-    }
-  });
-}
-
-// Call this function when opening a chat
-async function openChat(chatId) {
-    try {
-      showLoadingSpinner();
-      const chat = await apiCall(`/chats/${chatId}`);
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = `
-        <div class="chat-header">
-          <img src="${chat.avatar}" alt="${chat.username}">
-          <h3>${chat.username}</h3>
-        </div>
-        <div class="message-list" id="message-list">
-          ${chat.messages.map(message => createMessageElement(message)).join('')}
-        </div>
-        <form id="message-form">
-          <input type="text" id="message-input" placeholder="Type a message...">
-          <button type="submit">Send</button>
-        </form>
-      `;
-      const messageList = document.getElementById('message-list');
-      messageList.scrollTop = messageList.scrollHeight;
-      attachMessageFormListener(chatId);
-    } catch (error) {
-      console.error('Error opening chat:', error);
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = '<p>Failed to load chat. Please try again later.</p>';
-    } finally {
-      hideLoadingSpinner();
-    }
   
-  const messageList = document.getElementById('message-list');
-  implementInfiniteScroll(messageList, chatId);
-  
-}
-console.log("Script loaded successfully");
-
-
+  console.log("Script loaded successfully");
