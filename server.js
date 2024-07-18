@@ -24,6 +24,7 @@ const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chats');
 const groupRoutes = require('./routes/groups');
 
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
