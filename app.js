@@ -24,6 +24,111 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     return response.json();
 }
 
+let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+function toggleDarkMode() {
+  isDarkMode = !isDarkMode;
+  document.body.classList.toggle('dark-mode', isDarkMode);
+  localStorage.setItem('darkMode', isDarkMode);
+}
+
+async function fetchCurrentUser() {
+  try {
+    const user = await apiCall('/users/me');
+    currentUser = user;
+    updateUI();
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    logout();
+  }
+}
+
+async function loadOnlineUsers() {
+  try {
+    const onlineUsers = await apiCall('/users/online');
+    const onlineUsersList = document.getElementById('online-users-list');
+    onlineUsersList.innerHTML = '';
+    onlineUsers.forEach(user => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <img src="${user.avatar}" alt="${user.username}">
+        <span>${user.username}</span>
+      `;
+      onlineUsersList.appendChild(li);
+    });
+  } catch (error) {
+    console.error('Error loading online users:', error);
+  }
+}
+
+async function loadChats() {
+  try {
+    const chats = await apiCall('/chats');
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+      <h2>Your Chats</h2>
+      <div class="chat-list">
+        ${chats.map(chat => `
+          <div class="chat-item" data-chat-id="${chat._id}">
+            <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
+            <div class="chat-info">
+              <h3>${chat.participants[0].username}</h3>
+              <p>${chat.lastMessage || 'No messages yet'}</p>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    setActiveNavButton(document.getElementById('chat-btn'));
+    attachChatListeners();
+  } catch (error) {
+    console.error('Error loading chats:', error);
+    document.getElementById('content-area').innerHTML = '<p>Failed to load chats. Please try again later.</p>';
+  }
+}
+
+function initializeSocket() {
+  socket = new WebSocket('ws://localhost:5000');
+  socket.addEventListener('open', () => {
+    console.log('Connected to WebSocket server');
+  });
+  socket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'new_message') {
+      handleNewMessage(data.message);
+    } else if (data.type === 'user_status') {
+      updateOnlineUserStatus(data.user);
+    }
+  });
+  socket.addEventListener('close', () => {
+    console.log('Disconnected from WebSocket server');
+    setTimeout(initializeSocket, 5000); // Attempt to reconnect after 5 seconds
+  });
+}
+
+async function createGroup(name) {
+  try {
+    const group = await apiCall('/groups', 'POST', { name });
+    loadGroups();
+    return group;
+  } catch (error) {
+    console.error('Error creating group:', error);
+    throw error;
+  }
+}
+
+// Add dark mode toggle to the UI
+const darkModeToggle = document.createElement('button');
+darkModeToggle.id = 'dark-mode-toggle';
+darkModeToggle.textContent = 'Toggle Dark Mode';
+darkModeToggle.addEventListener('click', toggleDarkMode);
+document.body.appendChild(darkModeToggle);
+
+// Apply dark mode on load if it was previously enabled
+if (isDarkMode) {
+  document.body.classList.add('dark-mode');
+}
+
 function showAuthModal() {
     document.getElementById('auth-modal').style.display = 'block';
     document.getElementById('app').style.display = 'none';
