@@ -206,34 +206,42 @@ async function openChat(chatId) {
 }
 
 function createMessageElement(message) {
-  return `
-    <div class="message ${message.sender === currentUser.id ? 'sent' : 'received'}">
-      <p>${message.content}</p>
-      <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
-    </div>
-  `;
-}
-
-function attachMessageFormListener(chatId) {
-  const messageForm = document.getElementById('message-form');
-  const messageInput = document.getElementById('message-input');
-  messageForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const content = messageInput.value.trim();
-    if (content) {
-      try {
-        const message = await apiCall(`/chats/${chatId}/messages`, 'POST', { content });
-        const messageList = document.getElementById('message-list');
-        messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
-        messageList.scrollTop = messageList.scrollHeight;
-        messageInput.value = '';
-      } catch (error) {
-        console.error('Error sending message:', error);
-        alert('Failed to send message. Please try again.');
+    return `
+      <div class="message ${message.sender === currentUser.id ? 'sent' : 'received'}" data-message-id="${message._id}">
+        <p>${message.content}</p>
+        <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
+        <span class="read-receipt">${message.read ? '✓✓' : '✓'}</span>
+      </div>
+    `;
+  }
+  
+  function attachMessageFormListener(chatId) {
+    const messageForm = document.getElementById('message-form');
+    const messageInput = document.getElementById('message-input');
+    messageForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = messageInput.value.trim();
+      if (content) {
+        try {
+          const message = await apiCall(`/chats/${chatId}/messages`, 'POST', { content });
+          const messageList = document.getElementById('message-list');
+          messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
+          messageList.scrollTop = messageList.scrollHeight;
+          messageInput.value = '';
+        } catch (error) {
+          console.error('Error sending message:', error);
+          showToast('Failed to send message', 'error');
+        }
       }
-    }
-  });
-}
+    });
+  
+    messageInput.addEventListener('input', () => {
+      clearTimeout(typingTimeout);
+      sendTypingIndicator(chatId, true);
+      typingTimeout = setTimeout(() => sendTypingIndicator(chatId, false), 1000);
+    });
+  }
+  
 
 async function loadGroups() {
   try {
@@ -535,6 +543,107 @@ function loadSettings() {
       new Notification(title, { body });
     }
   }
+
+  // New feature: Theme switcher
+function toggleTheme() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+  }
+  
+  // New feature: Emoji picker
+  function addEmojiPicker() {
+    const emojiBtn = document.createElement('button');
+    emojiBtn.innerHTML = '😀';
+    emojiBtn.className = 'emoji-picker-btn';
+    emojiBtn.onclick = () => {
+      const picker = new EmojiPicker({
+        onEmojiSelect: emoji => {
+          const messageInput = document.getElementById('message-input');
+          messageInput.value += emoji.native;
+        }
+      });
+      picker.togglePicker(emojiBtn);
+    };
+    document.getElementById('message-form').prepend(emojiBtn);
+  }
+  
+  // New feature: Voice messages
+  let mediaRecorder;
+  let audioChunks = [];
+  
+  function setupVoiceRecording() {
+    const recordBtn = document.createElement('button');
+    recordBtn.innerHTML = '🎤';
+    recordBtn.className = 'voice-record-btn';
+    let isRecording = false;
+  
+    recordBtn.onclick = async () => {
+      if (!isRecording) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+  
+        mediaRecorder.ondataavailable = (e) => {
+          audioChunks.push(e.data);
+        };
+  
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'voice_message.ogg');
+          
+          try {
+            const response = await apiCall('/messages/voice', 'POST', formData);
+            handleNewMessage(response.message);
+          } catch (error) {
+            console.error('Error sending voice message:', error);
+            showToast('Failed to send voice message', 'error');
+          }
+        };
+  
+        mediaRecorder.start();
+        isRecording = true;
+        recordBtn.style.color = 'red';
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordBtn.style.color = '';
+      }
+    };
+  
+    document.getElementById('message-form').prepend(recordBtn);
+  }
+  
+  // New feature: Typing indicator
+  let typingTimeout;
+  function sendTypingIndicator(chatId, isTyping) {
+    socket.send(JSON.stringify({
+      type: 'typing',
+      chatId: chatId,
+      isTyping: isTyping
+    }));
+  }
+  
+  function handleTypingIndicator(data) {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (data.isTyping) {
+      typingIndicator.textContent = `${data.username} is typing...`;
+    } else {
+      typingIndicator.textContent = '';
+    }
+  }
+  
+  // New feature: Read receipts
+  function sendReadReceipt(messageId) {
+    apiCall(`/messages/${messageId}/read`, 'POST');
+  }
+  
+  function handleReadReceipt(data) {
+    const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
+    if (messageElement) {
+      messageElement.querySelector('.read-receipt').textContent = '✓✓';
+    }
+  }  
   
   function implementInfiniteScroll(messageList, chatId) {
     let page = 1;
