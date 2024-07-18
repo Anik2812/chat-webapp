@@ -1,7 +1,8 @@
 const express = require('express');
-const router = express.Router();
 const User = require('../models/User');
 const authenticateToken = require('../middleware/auth');
+
+const router = express.Router();
 
 router.get('/online', authenticateToken, async (req, res) => {
   try {
