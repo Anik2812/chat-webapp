@@ -36,39 +36,41 @@ function hideAuthModal() {
 
 async function login(username, password) {
     try {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-        if (!response.ok) throw new Error('Login failed');
-        const data = await response.json();
-        
-        if (!data.token) {
-            throw new Error('Token not received from server');
-        }
-        
-        token = data.token;
-        localStorage.setItem('token', token);
-        
-        // Assuming the server sends user data with the token
-        if (!data.user) {
-            throw new Error('User data not received from server');
-        }
-        
-        currentUser = data.user;
-        // Store user data in localStorage
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-        hideAuthModal();
-        updateUI();
-        loadChats();
-        initializeSocket();
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
+      if (!data.token) {
+        throw new Error('Token not received from server');
+      }
+      
+      token = data.token;
+      localStorage.setItem('token', token);
+      
+      if (!data.user) {
+        throw new Error('User data not received from server');
+      }
+      
+      currentUser = data.user;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+  
+      hideAuthModal();
+      updateUI();
+      loadChats();
+      initializeSocket();
     } catch (error) {
-        console.error('Login error:', error);
-        alert(`Login failed: ${error.message}`);
+      console.error('Login error:', error);
+      alert(`Login failed: ${error.message}`);
     }
-}
+  }
 
 
 function logout() {
