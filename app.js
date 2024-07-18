@@ -353,23 +353,113 @@ function showCreateGroupModal() {
 }
 
 function initializeSocket() {
-  socket = new WebSocket('ws://localhost:5000');
-  socket.addEventListener('open', () => {
-    console.log('Connected to WebSocket server');
-  });
-  socket.addEventListener('message', (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'new_message') {
-      handleNewMessage(data.message);
-    } else if (data.type === 'user_status') {
-      updateOnlineUserStatus(data.user);
+    socket = new WebSocket('ws://localhost:5000');
+    socket.addEventListener('open', () => {
+      console.log('Connected to WebSocket server');
+    });
+    socket.addEventListener('message', (event) => {
+      const data = JSON.parse(event.data);
+      switch (data.type) {
+        case 'new_message':
+          handleNewMessage(data.message);
+          break;
+        case 'user_status':
+          updateOnlineUserStatus(data.user);
+          break;
+        case 'typing':
+          handleTypingIndicator(data);
+          break;
+        case 'read_receipt':
+          handleReadReceipt(data);
+          break;
+      }
+    });
+    socket.addEventListener('close', () => {
+      console.log('Disconnected from WebSocket server');
+      setTimeout(initializeSocket, 5000);
+    });
+  }
+  
+  // New feature: File sharing
+  function setupFileSharing() {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.style.display = 'none';
+    fileInput.multiple = true;
+  
+    const fileBtn = document.createElement('button');
+    fileBtn.innerHTML = '📎';
+    fileBtn.className = 'file-share-btn';
+    fileBtn.onclick = () => fileInput.click();
+  
+    fileInput.onchange = async () => {
+      const files = Array.from(fileInput.files);
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+          const response = await apiCall('/messages/file', 'POST', formData);
+          handleNewMessage(response.message);
+        } catch (error) {
+          console.error('Error sending file:', error);
+          showToast(`Failed to send file: ${file.name}`, 'error');
+        }
+      }
+    };
+  
+    document.getElementById('message-form').prepend(fileBtn);
+    document.body.appendChild(fileInput);
+  }
+  
+  // New feature: Message reactions
+  function setupMessageReactions() {
+    document.getElementById('message-list').addEventListener('dblclick', (e) => {
+      const messageElement = e.target.closest('.message');
+      if (messageElement) {
+        const messageId = messageElement.dataset.messageId;
+        showReactionPicker(messageId, e.clientX, e.clientY);
+      }
+    });
+  }
+  
+  function showReactionPicker(messageId, x, y) {
+    const reactionPicker = document.createElement('div');
+    reactionPicker.className = 'reaction-picker';
+    reactionPicker.style.left = `${x}px`;
+    reactionPicker.style.top = `${y}px`;
+    reactionPicker.innerHTML = '👍 👎 😄 😢 😮 ❤️';
+  
+    reactionPicker.onclick = async (e) => {
+      if (e.target.textContent.trim()) {
+        try {
+          await apiCall(`/messages/${messageId}/react`, 'POST', { reaction: e.target.textContent });
+          updateMessageReactions(messageId, e.target.textContent);
+        } catch (error) {
+          console.error('Error adding reaction:', error);
+          showToast('Failed to add reaction', 'error');
+        }
+      }
+      document.body.removeChild(reactionPicker);
+    };
+  
+    document.body.appendChild(reactionPicker);
+  }
+  
+  function updateMessageReactions(messageId, reaction) {
+    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (messageElement) {
+      let reactionsElement = messageElement.querySelector('.message-reactions');
+      if (!reactionsElement) {
+        reactionsElement = document.createElement('div');
+        reactionsElement.className = 'message-reactions';
+        messageElement.appendChild(reactionsElement);
+      }
+      const reactionElement = document.createElement('span');
+      reactionElement.textContent = reaction;
+      reactionsElement.appendChild(reactionElement);
     }
-  });
-  socket.addEventListener('close', () => {
-    console.log('Disconnected from WebSocket server');
-    setTimeout(initializeSocket, 5000); // Attempt to reconnect after 5 seconds
-  });
-}
+  }
 
 function handleNewMessage(message) {
   const messageList = document.getElementById('message-list');
@@ -786,6 +876,29 @@ function toggleTheme() {
         updateUI();
         loadChats();
         initializeSocket();
+      } else {
+        logout();
+      }
+    } else {
+      showAuthModal();
+    }
+    const themeSwitcher = document.createElement('button');
+    themeSwitcher.textContent = '🌓';
+    themeSwitcher.onclick = toggleTheme;
+    document.querySelector('header').appendChild(themeSwitcher);
+  
+    if (token) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        currentUser = JSON.parse(storedUser);
+        hideAuthModal();
+        updateUI();
+        loadChats();
+        initializeSocket();
+        addEmojiPicker();
+        setupVoiceRecording();
+        setupFileSharing();
+        setupMessageReactions();
       } else {
         logout();
       }
