@@ -171,6 +171,8 @@ h1 {
 }
 
 #search-bar i {
+    flex: 0 1 40%;
+    margin: 0 20px;
     position: absolute;
     right: 10px;
     top: 50%;
@@ -179,6 +181,8 @@ h1 {
 }
 
 #user-actions button {
+    display: flex;
+    gap: 10px;
     background: none;
     border: none;
     font-size: 18px;
