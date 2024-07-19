@@ -472,6 +472,14 @@ body.dark-mode #message-form {
     color: #f0f0f0;
 }
 
+body.dark-mode #sidebar,
+body.dark-mode #sidebar .nav-btn,
+body.dark-mode #sidebar #username,
+body.dark-mode #sidebar #online-users h3,
+body.dark-mode #sidebar #online-users-list li {
+    color: white;
+}
+
 body.dark-mode .nav-btn:hover,
 body.dark-mode .nav-btn.active {
     background-color: var(--secondary-color);

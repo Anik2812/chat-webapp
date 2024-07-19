@@ -422,6 +422,7 @@ function showLoginForm() {
 function showRegisterForm() {
   document.getElementById('login-form').style.display = 'none';
   document.getElementById('register-form').style.display = 'block';
+  document.getElementById('auth-modal').classList.add('show');
 }
 
 function loadProfile() {
@@ -429,7 +430,7 @@ function loadProfile() {
   contentArea.innerHTML = `
     <h2>Your Profile</h2>
     <div class="profile-info">
-      <img src="${currentUser.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${currentUser.username}" class="profile-avatar">
+      <img src="${currentUser.avatar || 'default-avatar.png'}" alt="${currentUser.username}" class="profile-avatar" onerror="this.src='default-avatar.png'">
       <p><strong>Username:</strong> ${currentUser.username}</p>
       <p><strong>Email:</strong> ${currentUser.email}</p>
     </div>
@@ -439,409 +440,231 @@ function loadProfile() {
   document.getElementById('edit-profile-btn').addEventListener('click', showEditProfileModal);
 }
 
+function showEditProfileModal() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Edit Profile</h2>
+      <form id="edit-profile-form">
+        <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
+        <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
+        <input type="file" id="edit-avatar" accept="image/*">
+        <button type="submit">Save Changes</button>
+      </form>
+    </div>
+  `;
+  addBackButton('edit-profile-modal');
+  document.body.appendChild(modal);
+  modal.classList.add('show');
+
+  const editProfileForm = document.getElementById('edit-profile-form');
+  editProfileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('edit-username').value.trim();
+    const email = document.getElementById('edit-email').value.trim();
+    const avatarFile = document.getElementById('edit-avatar').files[0];
+
+    try {
+      showLoadingSpinner();
+      const formData = new FormData();
+      formData.append('username', username);
+      formData.append('email', email);
+      if (avatarFile) {
+        formData.append('avatar', avatarFile);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      const updatedUser = await response.json();
+      currentUser = updatedUser;
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+      updateUI();
+      loadProfile();
+      modal.classList.remove('show');
+      setTimeout(() => modal.remove(), 300);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      hideLoadingSpinner();
+    }
+  });
+}
+
 function loadSettings() {
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = `
-      <h2>Settings</h2>
-      <div class="settings-options">
-        <div class="setting-item">
-          <label for="dark-mode-toggle">Dark Mode</label>
-          <input type="checkbox" id="dark-mode-toggle">
-        </div>
-        <div class="setting-item">
-          <label for="notification-toggle">Enable Notifications</label>
-          <input type="checkbox" id="notification-toggle">
-        </div>
+  const contentArea = document.getElementById('content-area');
+  contentArea.innerHTML = `
+    <h2>Settings</h2>
+    <div class="settings-options">
+      <div class="setting-item">
+        <label for="dark-mode-toggle">Dark Mode</label>
+        <input type="checkbox" id="dark-mode-toggle">
       </div>
-    `;
-    setActiveNavButton(document.getElementById('settings-btn'));
-    
-    // Add event listeners for settings changes
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    darkModeToggle.checked = localStorage.getItem('darkMode') === 'true';
-    darkModeToggle.addEventListener('change', () => {
-      document.body.classList.toggle('dark-mode', darkModeToggle.checked);
-      localStorage.setItem('darkMode', darkModeToggle.checked);
-    });
+      <div class="setting-item">
+        <label for="notification-toggle">Enable Notifications</label>
+        <input type="checkbox" id="notification-toggle">
+      </div>
+    </div>
+  `;
+  setActiveNavButton(document.getElementById('settings-btn'));
   
-    const notificationToggle = document.getElementById('notification-toggle');
-    notificationToggle.checked = localStorage.getItem('notifications') === 'true';
-    notificationToggle.addEventListener('change', () => {
-      localStorage.setItem('notifications', notificationToggle.checked);
-      if (notificationToggle.checked) {
-        requestNotificationPermission();
-      }
-    });
-  }
-  
-  function showEditProfileModal() {
-    const modal = document.createElement('div');
-    modal.className = 'modal show';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h2>Edit Profile</h2>
-            <form id="edit-profile-form">
-                <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
-                <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
-                <input type="file" id="edit-avatar" accept="image/*">
-                <button type="submit">Save Changes</button>
-            </form>
-        </div>
-    `;
-    document.body.appendChild(modal);
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  darkModeToggle.checked = localStorage.getItem('darkMode') === 'true';
+  darkModeToggle.addEventListener('change', () => {
+    document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+    localStorage.setItem('darkMode', darkModeToggle.checked);
+  });
 
-    const editProfileForm = document.getElementById('edit-profile-form');
-    editProfileForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('edit-username').value.trim();
-        const email = document.getElementById('edit-email').value.trim();
-        const avatarFile = document.getElementById('edit-avatar').files[0];
-
-        try {
-            showLoadingSpinner();
-            const formData = new FormData();
-            formData.append('username', username);
-            formData.append('email', email);
-            if (avatarFile) {
-                formData.append('avatar', avatarFile);
-            }
-
-            const response = await fetch(`${API_BASE_URL}/users/profile`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update profile');
-            }
-
-            const updatedUser = await response.json();
-            currentUser = updatedUser;
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            updateUI();
-            loadProfile();
-            modal.remove();
-            showToast('Profile updated successfully', 'success');
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            showToast('Failed to update profile. Please try again.', 'error');
-        } finally {
-            hideLoadingSpinner();
-        }
-    });
+  const notificationToggle = document.getElementById('notification-toggle');
+  notificationToggle.checked = localStorage.getItem('notifications') === 'true';
+  notificationToggle.addEventListener('change', () => {
+    localStorage.setItem('notifications', notificationToggle.checked);
+    if (notificationToggle.checked) {
+      requestNotificationPermission();
+    }
+  });
 }
-  
-  function requestNotificationPermission() {
-    if ('Notification' in window) {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('Notification permission granted');
-        }
-      });
-    }
-  }
-  
-  function showNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('notifications') === 'true') {
-      new Notification(title, { body });
-    }
-  }
 
-  // New feature: Theme switcher
-function toggleTheme() {
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
-  }
-  
-  // New feature: Emoji picker
-  function addEmojiPicker() {
-    const emojiBtn = document.createElement('button');
-    emojiBtn.innerHTML = '😀';
-    emojiBtn.className = 'emoji-picker-btn';
-    emojiBtn.onclick = () => {
-      const picker = new EmojiPicker({
-        onEmojiSelect: emoji => {
-          const messageInput = document.getElementById('message-input');
-          if (messageInput) {
-          messageInput.value += emoji.native;
-        } else {
-          console.log('Message input not found');
-      }
-        }
-      });
-      picker.togglePicker(emojiBtn);
-    };
-    document.getElementById('message-form').prepend(emojiBtn);
-  }
-  
-  // New feature: Voice messages
-  let mediaRecorder;
-  let audioChunks = [];
-  
-  function setupVoiceRecording() {
-    const recordBtn = document.createElement('button');
-    recordBtn.innerHTML = '🎤';
-    recordBtn.className = 'voice-record-btn';
-    let isRecording = false;
-  
-    recordBtn.onclick = async () => {
-      if (!isRecording) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-  
-        mediaRecorder.ondataavailable = (e) => {
-          audioChunks.push(e.data);
-        };
-  
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/ogg; codecs=opus' });
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'voice_message.ogg');
-          
-          try {
-            const response = await apiCall('/messages/voice', 'POST', formData);
-            handleNewMessage(response.message);
-          } catch (error) {
-            console.error('Error sending voice message:', error);
-            showToast('Failed to send voice message', 'error');
-          }
-        };
-  
-        mediaRecorder.start();
-        isRecording = true;
-        recordBtn.style.color = 'red';
-      } else {
-        mediaRecorder.stop();
-        isRecording = false;
-        recordBtn.style.color = '';
-      }
-    };
-  
-    document.getElementById('message-form').prepend(recordBtn);
-  }
-
-  async function deleteGroup(groupId) {
-    if (await confirmAction('Are you sure you want to delete this group?')) {
-        try {
-            await apiCall(`/groups/${groupId}`, 'DELETE');
-            showToast('Group deleted successfully', 'success');
-            loadGroups(); // Reload the groups list
-        } catch (error) {
-            console.error('Error deleting group:', error);
-            showToast('Failed to delete group', 'error');
-        }
-    }
+function addBackButton(modalId) {
+  const modal = document.getElementById(modalId);
+  const backButton = document.createElement('button');
+  backButton.textContent = 'Back';
+  backButton.classList.add('back-btn');
+  backButton.addEventListener('click', () => {
+      modal.classList.remove('show');
+  });
+  modal.querySelector('.modal-content').prepend(backButton);
 }
-  
-  // New feature: Typing indicator
-  let typingTimeout;
-  function sendTypingIndicator(chatId, isTyping) {
-    socket.send(JSON.stringify({
-      type: 'typing',
-      chatId: chatId,
-      isTyping: isTyping
-    }));
-  }
-  
-  function handleTypingIndicator(data) {
-    const typingIndicator = document.getElementById('typing-indicator');
-    if (data.isTyping) {
-      typingIndicator.textContent = `${data.username} is typing...`;
-    } else {
-      typingIndicator.textContent = '';
-    }
-  }
-  
-  // New feature: Read receipts
-  function sendReadReceipt(messageId) {
-    apiCall(`/messages/${messageId}/read`, 'POST');
-  }
-  
-  function handleReadReceipt(data) {
-    const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
-    if (messageElement) {
-      messageElement.querySelector('.read-receipt').textContent = '✓✓';
-    }
-  }  
-  
-  function implementInfiniteScroll(messageList, chatId) {
-    let page = 1;
-    let loading = false;
-  
-    messageList.addEventListener('scroll', async () => {
-      if (messageList.scrollTop === 0 && !loading) {
-        loading = true;
-        try {
-          const oldMessages = await apiCall(`/chats/${chatId}/messages?page=${page + 1}`);
-          if (oldMessages.length > 0) {
-            page++;
-            const oldMessageElements = oldMessages.map(createMessageElement).join('');
-            messageList.insertAdjacentHTML('afterbegin', oldMessageElements);
-            messageList.scrollTop = 100; // Scroll down a bit to show new content
-          }
-        } catch (error) {
-          console.error('Error loading old messages:', error);
-        } finally {
-          loading = false;
-        }
+
+
+function requestNotificationPermission() {
+  if ('Notification' in window) {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        console.log('Notification permission granted');
       }
     });
   }
-  
-  function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.classList.add('show');
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }, 100);
+}
+
+function showNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('notifications') === 'true') {
+    new Notification(title, { body });
   }
-  
-  function confirmAction(message) {
-    return new Promise((resolve) => {
-      const modal = document.createElement('div');
-      modal.className = 'modal';
-      modal.innerHTML = `
-        <div class="modal-content">
-          <p>${message}</p>
-          <div class="modal-actions">
-            <button id="confirm-yes">Yes</button>
-            <button id="confirm-no">No</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-      modal.classList.add('show');
-  
-      const yesBtn = document.getElementById('confirm-yes');
-      const noBtn = document.getElementById('confirm-no');
-  
-      yesBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        setTimeout(() => modal.remove(), 300);
-        resolve(true);
-      });
-  
-      noBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        setTimeout(() => modal.remove(), 300);
-        resolve(false);
-      });
-    });
+}
+
+async function startChat(userId) {
+  try {
+    const chat = await apiCall('/chats', 'POST', { userId });
+    openChat(chat._id);
+  } catch (error) {
+    console.error('Error starting chat:', error);
+    alert('Failed to start chat. Please try again.');
   }
-  
-  async function deleteChat(chatId) {
-    const shouldDelete = await confirmAction('Are you sure you want to delete this chat?');
-    if (shouldDelete) {
-      try {
-        await apiCall(`/chats/${chatId}`, 'DELETE');
-        loadChats();
-        showToast('Chat deleted successfully', 'success');
-      } catch (error) {
-        console.error('Error deleting chat:', error);
-        showToast('Failed to delete chat', 'error');
-      }
+}
+
+function showNotifications() {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Notifications</h2>
+      <ul id="notifications-list"></ul>
+      
+    </div>
+  `;
+  addBackButton('notification-modal');
+  document.body.appendChild(modal);
+  modal.classList.add('show');
+  loadNotifications();
+  const notificationsList = document.getElementById('notifications-list');
+  notificationsList.innerHTML = '<li>You have no new notifications.</li>';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
+  const logoutBtn = document.getElementById('logout-btn');
+  const chatBtn = document.getElementById('chat-btn');
+  const groupsBtn = document.getElementById('groups-btn');
+  const profileBtn = document.getElementById('profile-btn');
+  const settingsBtn = document.getElementById('settings-btn');
+  const showRegisterBtn = document.getElementById('showRegister');
+  const showLoginBtn = document.getElementById('showLogin');
+  const notificationsBtn = document.getElementById('notificationsBtn');
+
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    if (username && password) {
+      login(username, password);
     }
-  }
-  
-  window.addEventListener('online', () => {
-    showToast('You are back online', 'success');
-    initializeSocket(); // Reconnect WebSocket
   });
-  
-  window.addEventListener('offline', () => {
-    showToast('You are offline', 'warning');
-  });
-  
-  document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const logoutBtn = document.getElementById('logout-btn');
-    const chatBtn = document.getElementById('chat-btn');
-    const groupsBtn = document.getElementById('groups-btn');
-    const profileBtn = document.getElementById('profile-btn');
-    const settingsBtn = document.getElementById('settings-btn');
-    const showRegisterBtn = document.getElementById('showRegister');
-    const showLoginBtn = document.getElementById('showLogin');
-    console.log("DOM fully loaded and parsed");
-  
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const username = document.getElementById('login-username').value.trim();
-      const password = document.getElementById('login-password').value.trim();
-      if (username && password) {
-        login(username, password);
-      }
-    });
-  
-    registerForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const username = document.getElementById('register-username').value.trim();
-      const password = document.getElementById('register-password').value.trim();
-      const email = document.getElementById('register-email').value.trim();
-      if (username && password && email) {
-        register(username, password, email);
-      }
-    });
-  
-    logoutBtn.addEventListener('click', logout);
-    chatBtn.addEventListener('click', loadChats);
-    groupsBtn.addEventListener('click', loadGroups);
-    profileBtn.addEventListener('click', loadProfile);
-    settingsBtn.addEventListener('click', loadSettings);
-    showRegisterBtn.addEventListener('click', showRegisterForm);
-    showLoginBtn.addEventListener('click', showLoginForm);
-  
-    if (token) {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-        hideAuthModal();
-        updateUI();
-        loadChats();
-        initializeSocket();
-      } else {
-        logout();
-      }
-    } else {
-      showAuthModal();
+
+  registerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value.trim();
+    const email = document.getElementById('register-email').value.trim();
+    if (username && password && email) {
+      register(username, password, email);
     }
-    const themeSwitcher = document.createElement('button');
-    themeSwitcher.textContent = '🌓';
-    themeSwitcher.onclick = toggleTheme;
-    document.querySelector('header').appendChild(themeSwitcher);
-  
-    if (token) {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        currentUser = JSON.parse(storedUser);
-        hideAuthModal();
-        updateUI();
-        loadChats();
-        initializeSocket();
-        addEmojiPicker();
-        setupVoiceRecording();
-        setupFileSharing();
-        setupMessageReactions();
-      } else {
-        logout();
-      }
-    } else {
-      showAuthModal();
-    }
-  
-    // Initialize dark mode
-    const darkMode = localStorage.getItem('darkMode') === 'true';
-    document.body.classList.toggle('dark-mode', darkMode);
   });
-  
-  console.log("Script loaded successfully");
+
+  logoutBtn.addEventListener('click', logout);
+  chatBtn.addEventListener('click', loadChats);
+  groupsBtn.addEventListener('click', loadGroups);
+  profileBtn.addEventListener('click', loadProfile);
+  settingsBtn.addEventListener('click', loadSettings);
+  showRegisterBtn.addEventListener('click', showRegisterForm);
+  showLoginBtn.addEventListener('click', showLoginForm);
+  notificationsBtn.addEventListener('click', showNotifications);
+
+  // Check if user is already logged in
+  if (token) {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      currentUser = JSON.parse(storedUser);
+      hideAuthModal();
+      updateUI();
+      loadChats();
+      initializeSocket();
+    } else {
+      logout(); // Clear potentially invalid token
+    }
+  } else {
+    showAuthModal();
+  }
+
+  // Initialize dark mode
+  const darkMode = localStorage.getItem('darkMode') === 'true';
+  document.body.classList.toggle('dark-mode', darkMode);
+});
+
+// Utility function to handle API errors
+function handleApiError(error) {
+  console.error('API Error:', error);
+  if (error.message === 'Session expired. Please login again.') {
+    logout();
+    alert(error.message);
+  } else {
+    alert('An error occurred. Please try again.');
+  }
+}
+
+// Add this line at the end of your script to handle uncaught errors
+window.addEventListener('error', (event) => {
+  console.error('Uncaught error:', event.error);
+});
