@@ -14,6 +14,7 @@
             <div id="user-profile">
                 <img src="default-avatar.png" alt="Profile" id="profile-pic">
                 <span id="username"></span>
+                <span id="user-status"></span>
             </div>
             <nav>
                 <button id="chat-btn" class="nav-btn active"><i class="fas fa-comments"></i> Chats</button>
@@ -42,6 +43,7 @@
             <div id="content-area"></div>
         </main>
     </div>
+    <!-- Auth Modal -->
     <div id="auth-modal" class="modal">
         <div class="modal-content">
             <h2>Welcome to NeXtChat</h2>
@@ -53,6 +55,7 @@
             <p>Don't have an account? <a href="#" id="showRegister">Register</a></p>
         </div>
     </div>
+    <!-- Register Modal -->
     <div id="register-modal" class="modal">
         <div class="modal-content">
             <h2>Create an Account</h2>
@@ -65,12 +68,14 @@
             <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
         </div>
     </div>
+    <!-- Notification Modal -->
     <div id="notification-modal" class="modal">
         <div class="modal-content">
             <h2>Notifications</h2>
             <ul id="notification-list"></ul>
         </div>
     </div>
+    <!-- Create Group Modal -->
     <div id="create-group-modal" class="modal">
         <div class="modal-content">
             <h2>Create New Group</h2>
@@ -80,6 +85,7 @@
             </form>
         </div>
     </div>
+    <!-- Edit Profile Modal -->
     <div id="edit-profile-modal" class="modal">
         <div class="modal-content">
             <h2>Edit Profile</h2>
@@ -89,7 +95,6 @@
                 <input type="file" id="edit-avatar" accept="image/*">
                 <button type="submit">Save Changes</button>
             </form>
-            <button id="back-from-edit-profile" class="back-btn">Back</button>
         </div>
     </div>
     <div id="loading-spinner" class="loading-spinner"></div>

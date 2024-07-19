@@ -1,31 +1,20 @@
 const MOCK_USERS = [
-  { id: '1', username: 'Harsh', online: true, lastOnline: new Date(), avatar: 'https://example.com/avatar1.jpg' },
-  { id: '2', username: 'Jaimin', online: false, lastOnline: new Date(Date.now() - 3600000), avatar: 'https://example.com/avatar2.jpg' },
-  { id: '3', username: 'Swayam', online: true, lastOnline: new Date(), avatar: 'https://example.com/avatar3.jpg' }
+  { id: '1', username: 'Harsh', online: true, lastOnline: new Date(), avatar: 'avatar1.jpg' },
+  { id: '2', username: 'Jaimin', online: false, lastOnline: new Date(Date.now() - 3600000), avatar: 'avatar2.jpg' },
+  { id: '3', username: 'Swayam', online: true, lastOnline: new Date(), avatar: 'avatar3.jpg' }
 ];
 
 const MOCK_CHATS = MOCK_USERS.map(user => ({
   _id: user.id,
   participants: [user],
-  messages: [
-    { sender: user.id, content: `Hello from ${user.username}`, timestamp: new Date(Date.now() - 1000000) },
-    { sender: '0', content: `Hi ${user.username}! How are you?`, timestamp: new Date(Date.now() - 900000) },
-    { sender: user.id, content: "I'm doing great, thanks for asking!", timestamp: new Date(Date.now() - 800000) },
-    { sender: '0', content: "That's wonderful to hear!", timestamp: new Date(Date.now() - 700000) },
-  ],
-  lastMessage: "That's wonderful to hear!",
-  updatedAt: new Date(Date.now() - 700000)
+  messages: [{ sender: user.id, content: `wassup man`, timestamp: new Date() }],
+  lastMessage: `Hello from ${user.username}`,
+  updatedAt: user.lastOnline
 }));
 
 const MOCK_GROUPS = [
-  { _id: '1', name: 'General', members: MOCK_USERS, messages: [], avatar: 'https://example.com/group1.jpg' },
-  { _id: '2', name: 'Work', members: [MOCK_USERS[0], MOCK_USERS[1]], messages: [], avatar: 'https://example.com/group2.jpg' }
-];
-
-const MOCK_NOTIFICATIONS = [
-  { id: '1', content: 'New message from Harsh', timestamp: new Date(Date.now() - 3600000) },
-  { id: '2', content: 'Jaimin mentioned you in Work group', timestamp: new Date(Date.now() - 7200000) },
-  { id: '3', content: 'Swayam sent you a friend request', timestamp: new Date(Date.now() - 86400000) },
+  { _id: '1', name: 'General', members: MOCK_USERS, messages: [], avatar: 'group-avatar.png' },
+  { _id: '2', name: 'Work', members: [MOCK_USERS[0], MOCK_USERS[1]], messages: [], avatar: 'group-avatar.png' }
 ];
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -52,8 +41,6 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   } else if (endpoint === '/users/profile' && method === 'PUT') {
     currentUser = { ...currentUser, ...body };
     return currentUser;
-  } else if (endpoint === '/notifications') {
-    return MOCK_NOTIFICATIONS;
   }
 
   throw new Error('Not found');
@@ -82,7 +69,7 @@ async function login(username, password) {
     id: '0',
     username: username,
     email: `${username}@example.com`,
-    avatar: 'default-avatar.png'
+    avatar: 'avatar.png'
   };
   try {
     showLoadingSpinner();
@@ -162,7 +149,7 @@ async function loadChats() {
       <div class="chat-list">
         ${chats.map(chat => `
           <div class="chat-item slide-in" data-chat-id="${chat._id}">
-            <img src="${chat.participants[0].avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
+            <img src="${chat.participants[0].avatar || 'avatar.png'}" alt="${chat.participants[0].username}">
             <div class="chat-info">
               <h3>${chat.participants[0].username}</h3>
               <p>${chat.lastMessage || 'No messages yet'}</p>
@@ -185,7 +172,6 @@ async function loadChats() {
   }
 }
 
-
 function attachChatListeners() {
   document.querySelectorAll('.chat-item').forEach(item => {
     item.addEventListener('click', () => openChat(item.dataset.chatId));
@@ -199,7 +185,7 @@ async function openChat(chatId) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
       <div class="chat-header">
-        <img src="${chat.participants[0].avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
+        <img src="${chat.participants[0].avatar || 'avatar.png'}" alt="${chat.participants[0].username}">
         <h3>${chat.participants[0].username}</h3>
       </div>
       <div class="message-list" id="message-list">
@@ -264,7 +250,7 @@ async function loadGroups() {
       <div class="group-list">
         ${groups.map(group => `
           <div class="group-item slide-in" data-group-id="${group._id}">
-            <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+            <img src="${group.avatar || 'group-avatar.png'}" alt="${group.name}">
             <h3>${group.name}</h3>
             <p>Members: ${group.members.length}</p>
           </div>
@@ -297,7 +283,7 @@ async function openGroup(groupId) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
       <div class="group-header">
-        <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+        <img src="${group.avatar || 'group-avatar.png'}" alt="${group.name}">
         <h3>${group.name}</h3>
       </div>
       <div class="message-list" id="message-list">
@@ -391,16 +377,14 @@ function loadProfile() {
   contentArea.innerHTML = `
     <h2>Your Profile</h2>
     <div class="profile-info">
-      <img src="${currentUser.avatar || 'default-avatar.png'}" alt="${currentUser.username}" class="profile-avatar">
+      <img src="${currentUser.avatar || 'avatar.png'}" alt="${currentUser.username}" class="profile-avatar">
       <p><strong>Username:</strong> <span id="profile-username">${currentUser.username}</span></p>
       <p><strong>Email:</strong> <span id="profile-email">${currentUser.email}</span></p>
     </div>
     <button id="edit-profile-btn" class="btn">Edit Profile</button>
-    <button id="back-btn" class="btn">Back</button>
   `;
   setActiveNavButton(document.getElementById('profile-btn'));
   document.getElementById('edit-profile-btn').addEventListener('click', showEditProfileModal);
-  document.getElementById('back-btn').addEventListener('click', loadChats);
 }
 
 function loadSettings() {
@@ -439,7 +423,7 @@ function loadSettings() {
 
 function showEditProfileModal() {
   const modal = document.createElement('div');
-  modal.className = 'modal show';
+  modal.className = 'modal';
   modal.innerHTML = `
     <div class="modal-content">
       <h2>Edit Profile</h2>
@@ -448,17 +432,14 @@ function showEditProfileModal() {
         <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
         <input type="file" id="edit-avatar" accept="image/*">
         <button type="submit">Save Changes</button>
-        <button type="button" id="cancel-edit">Cancel</button>
       </form>
     </div>
   `;
   document.body.appendChild(modal);
+  modal.classList.add('show');
 
   const editProfileForm = document.getElementById('edit-profile-form');
   editProfileForm.addEventListener('submit', handleEditProfileSubmit);
-  document.getElementById('cancel-edit').addEventListener('click', () => {
-    modal.remove();
-  });
 }
 
 async function handleEditProfileSubmit(e) {
@@ -478,7 +459,8 @@ async function handleEditProfileSubmit(e) {
     showLoadingSpinner();
     await updateProfile(formData);
     loadProfile();
-    document.querySelector('.modal').remove();
+    document.querySelector('.modal').classList.remove('show');
+    setTimeout(() => document.querySelector('.modal').remove(), 300);
   } catch (error) {
     console.error('Error updating profile:', error);
     alert('Failed to update profile. Please try again.');
@@ -488,18 +470,24 @@ async function handleEditProfileSubmit(e) {
 }
 
 async function updateProfile(formData) {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  currentUser = {
-    ...currentUser,
-    username: formData.get('username'),
-    email: formData.get('email'),
-  };
-  if (formData.get('avatar')) {
-    currentUser.avatar = URL.createObjectURL(formData.get('avatar'));
+  try {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    currentUser = {
+      ...currentUser,
+      username: formData.get('username'),
+      email: formData.get('email'),
+    };
+    if (formData.get('avatar')) {
+      currentUser.avatar = URL.createObjectURL(formData.get('avatar'));
+    }
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUI();
+    showToast('Profile updated successfully', 'success');
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    showToast('Failed to update profile. Please try again.', 'error');
   }
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-  updateUI();
 }
 
 function requestNotificationPermission() {
@@ -512,47 +500,10 @@ function requestNotificationPermission() {
   }
 }
 
-function showNotifications() {
-  const notificationModal = document.getElementById('notification-modal');
-  notificationModal.classList.add('show');
-  
-  apiCall('/notifications').then(notifications => {
-    const notificationList = document.getElementById('notification-list');
-    notificationList.innerHTML = notifications.map(notification => `
-      <li class="notification-item">
-        <p>${notification.content}</p>
-        <span class="timestamp">${new Date(notification.timestamp).toLocaleString()}</span>
-      </li>
-    `).join('');
-  });
-}
-
-function showNewChatModal() {
-  const modal = document.createElement('div');
-  modal.className = 'modal show';
-  modal.innerHTML = `
-    <div class="modal-content">
-      <h2>Start New Chat</h2>
-      <input type="text" id="new-chat-username" placeholder="Enter username">
-      <button id="start-chat-btn">Start Chat</button>
-      <button id="cancel-new-chat">Cancel</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  document.getElementById('start-chat-btn').addEventListener('click', () => {
-    const username = document.getElementById('new-chat-username').value.trim();
-    if (username) {
-      // Simulate starting a new chat
-      alert(`Started a new chat with ${username}`);
-      modal.remove();
-      loadChats();
-    }
-  });
-
-  document.getElementById('cancel-new-chat').addEventListener('click', () => {
-    modal.remove();
-  });
+function showNotification(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted' && localStorage.getItem('notifications') === 'true') {
+    new Notification(title, { body });
+  }
 }
 
 function showToast(message, type = 'info') {
@@ -645,8 +596,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsBtn = document.getElementById('settings-btn');
   const showRegisterBtn = document.getElementById('showRegister');
   const showLoginBtn = document.getElementById('showLogin');
-  const notificationsBtn = document.getElementById('notificationsBtn');
-  const newChatBtn = document.getElementById('newChatBtn');
 
   loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -674,8 +623,6 @@ document.addEventListener('DOMContentLoaded', () => {
   settingsBtn.addEventListener('click', loadSettings);
   showRegisterBtn.addEventListener('click', showRegisterForm);
   showLoginBtn.addEventListener('click', showLoginForm);
-  notificationsBtn.addEventListener('click', showNotifications);
-  newChatBtn.addEventListener('click', showNewChatModal);
 
   // Check if user is already logged in
   if (token) {
