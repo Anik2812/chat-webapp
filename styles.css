@@ -113,6 +113,7 @@ nav {
     align-items: center;
     margin-bottom: 10px;
     transition: transform var(--transition-speed);
+    cursor: pointer;
 }
 
 #online-users-list li:hover {
@@ -171,8 +172,6 @@ h1 {
 }
 
 #search-bar i {
-    flex: 0 1 40%;
-    margin: 0 20px;
     position: absolute;
     right: 10px;
     top: 50%;
@@ -181,8 +180,6 @@ h1 {
 }
 
 #user-actions button {
-    display: flex;
-    gap: 10px;
     background: none;
     border: none;
     font-size: 18px;
@@ -526,23 +523,3 @@ body.dark-mode .message .timestamp {
         grid-template-columns: 1fr;
     }
 }
-
-.profile-avatar {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 50%;
-  }
-  
-  .online-status {
-    font-size: 12px;
-    margin-top: 5px;
-  }
-  
-  .online-status.online {
-    color: green;
-  }
-  
-  .online-status.offline {
-    color: gray;
-  }

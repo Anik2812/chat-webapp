@@ -80,6 +80,18 @@
             </form>
         </div>
     </div>
+    <div id="edit-profile-modal" class="modal">
+        <div class="modal-content">
+            <h2>Edit Profile</h2>
+            <form id="edit-profile-form">
+                <input type="text" id="edit-username" placeholder="Username" required>
+                <input type="email" id="edit-email" placeholder="Email" required>
+                <input type="file" id="edit-avatar" accept="image/*">
+                <button type="submit">Save Changes</button>
+            </form>
+            <button id="back-from-edit-profile" class="back-btn">Back</button>
+        </div>
+    </div>
     <div id="loading-spinner" class="loading-spinner"></div>
     <script src="app.js"></script>
 </body>
