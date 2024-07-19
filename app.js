@@ -3,8 +3,6 @@ let token = localStorage.getItem('token');
 let currentUser = null;
 let socket = null;
 
-console.log("Script starting...");
-
 async function apiCall(endpoint, method = 'GET', body = null) {
   const headers = {
     'Content-Type': 'application/json',
@@ -13,15 +11,20 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   const config = { method, headers };
   if (body) config.body = JSON.stringify(body);
   
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  if (!response.ok) {
-    if (response.status === 401) {
-      logout();
-      throw new Error('Session expired. Please login again.');
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    if (!response.ok) {
+      if (response.status === 401) {
+        logout();
+        throw new Error('Session expired. Please login again.');
+      }
+      throw new Error('API call failed');
     }
-    throw new Error('API call failed');
+    return response.json();
+  } catch (error) {
+    console.error('API call error:', error);
+    throw error;
   }
-  return response.json();
 }
 
 function showLoadingSpinner() {
@@ -33,13 +36,11 @@ function hideLoadingSpinner() {
 }
 
 function showAuthModal() {
-  console.log("Showing auth modal");
   document.getElementById('auth-modal').classList.add('show');
   document.getElementById('app').style.display = 'none';
 }
 
 function hideAuthModal() {
-  console.log("Hiding auth modal");
   document.getElementById('auth-modal').classList.remove('show');
   document.getElementById('app').style.display = 'flex';
 }
@@ -128,9 +129,10 @@ async function loadOnlineUsers() {
     onlineUsers.forEach(user => {
       const li = document.createElement('li');
       li.innerHTML = `
-        <img src="${user.avatar}" alt="${user.username}">
+        <img src="${user.avatar || 'default-avatar.png'}" alt="${user.username}" onerror="this.src='default-avatar.png'">
         <span>${user.username}</span>
       `;
+      li.addEventListener('click', () => startChat(user.id));
       onlineUsersList.appendChild(li);
     });
   } catch (error) {
@@ -140,32 +142,31 @@ async function loadOnlineUsers() {
 
 async function loadChats() {
   try {
-      showLoadingSpinner();
-      const chats = await apiCall('/chats');
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = `
-          <h2>Your Chats</h2>
-          <div class="chat-list">
-              ${chats.map(chat => `
-                  <div class="chat-item" data-chat-id="${chat._id}">
-                      <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.username}">
-                      <div class="chat-info">
-                          <h3>${chat.username}</h3>
-                          <p>${chat.lastMessage || 'No messages yet'}</p>
-                      </div>
-                  </div>
-              `).join('')}
+    showLoadingSpinner();
+    const chats = await apiCall('/chats');
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+      <h2>Your Chats</h2>
+      <div class="chat-list">
+        ${chats.map(chat => `
+          <div class="chat-item" data-chat-id="${chat._id}">
+            <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}" onerror="this.src='default-avatar.png'">
+            <div class="chat-info">
+              <h3>${chat.participants[0].username}</h3>
+              <p>${chat.lastMessage || 'No messages yet'}</p>
+            </div>
           </div>
-          <button id="new-chat-btn">Start New Chat</button>
-      `;
-      setActiveNavButton(document.getElementById('chat-btn'));
-      attachChatListeners();
+        `).join('')}
+      </div>
+    `;
+    setActiveNavButton(document.getElementById('chat-btn'));
+    attachChatListeners();
   } catch (error) {
-      console.error('Error loading chats:', error);
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = '<p>Failed to load chats. Please try again later.</p>';
+    console.error('Error loading chats:', error);
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<p>Failed to load chats. Please try again later.</p>';
   } finally {
-      hideLoadingSpinner();
+    hideLoadingSpinner();
   }
 }
 
@@ -177,71 +178,63 @@ function attachChatListeners() {
 
 async function openChat(chatId) {
   try {
-      showLoadingSpinner();
-      const chat = await apiCall(`/chats/${chatId}`);
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = `
-          <div class="chat-header">
-              <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.username}">
-              <h3>${chat.username}</h3>
-          </div>
-          <div class="message-list" id="message-list">
-              ${chat.messages.map(message => createMessageElement(message)).join('')}
-          </div>
-          <form id="message-form">
-              <input type="text" id="message-input" placeholder="Type a message...">
-              <button type="submit">Send</button>
-          </form>
-      `;
-      const messageList = document.getElementById('message-list');
-      messageList.scrollTop = messageList.scrollHeight;
-      attachMessageFormListener(chatId);
+    showLoadingSpinner();
+    const chat = await apiCall(`/chats/${chatId}`);
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+      <div class="chat-header">
+        <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.username}" onerror="this.src='default-avatar.png'">
+        <h3>${chat.username}</h3>
+      </div>
+      <div class="message-list" id="message-list">
+        ${chat.messages.map(message => createMessageElement(message)).join('')}
+      </div>
+      <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type a message...">
+        <button type="submit">Send</button>
+      </form>
+    `;
+    const messageList = document.getElementById('message-list');
+    messageList.scrollTop = messageList.scrollHeight;
+    attachMessageFormListener(chatId);
   } catch (error) {
-      console.error('Error opening chat:', error);
-      const contentArea = document.getElementById('content-area');
-      contentArea.innerHTML = '<p>Failed to load chat. Please try again later.</p>';
+    console.error('Error opening chat:', error);
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = '<p>Failed to load chat. Please try again later.</p>';
   } finally {
-      hideLoadingSpinner();
+    hideLoadingSpinner();
   }
 }
 
 function createMessageElement(message) {
-    return `
-      <div class="message ${message.sender === currentUser.id ? 'sent' : 'received'}" data-message-id="${message._id}">
-        <p>${message.content}</p>
-        <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
-        <span class="read-receipt">${message.read ? '✓✓' : '✓'}</span>
-      </div>
-    `;
-  }
-  
-  function attachMessageFormListener(chatId) {
-    const messageForm = document.getElementById('message-form');
-    const messageInput = document.getElementById('message-input');
-    messageForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const content = messageInput.value.trim();
-      if (content) {
-        try {
-          const message = await apiCall(`/chats/${chatId}/messages`, 'POST', { content });
-          const messageList = document.getElementById('message-list');
-          messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
-          messageList.scrollTop = messageList.scrollHeight;
-          messageInput.value = '';
-        } catch (error) {
-          console.error('Error sending message:', error);
-          showToast('Failed to send message', 'error');
-        }
+  return `
+    <div class="message ${message.sender === currentUser.id ? 'sent' : 'received'}">
+      <p>${message.content}</p>
+      <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
+    </div>
+  `;
+}
+
+function attachMessageFormListener(chatId) {
+  const messageForm = document.getElementById('message-form');
+  const messageInput = document.getElementById('message-input');
+  messageForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const content = messageInput.value.trim();
+    if (content) {
+      try {
+        const message = await apiCall(`/chats/${chatId}/messages`, 'POST', { content });
+        const messageList = document.getElementById('message-list');
+        messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
+        messageList.scrollTop = messageList.scrollHeight;
+        messageInput.value = '';
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message. Please try again.');
       }
-    });
-  
-    messageInput.addEventListener('input', () => {
-      clearTimeout(typingTimeout);
-      sendTypingIndicator(chatId, true);
-      typingTimeout = setTimeout(() => sendTypingIndicator(chatId, false), 1000);
-    });
-  }
-  
+    }
+  });
+}
 
 async function loadGroups() {
   try {
@@ -253,9 +246,10 @@ async function loadGroups() {
       <div class="group-list">
         ${groups.map(group => `
           <div class="group-item" data-group-id="${group._id}">
-            <img src="${group.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${group.name}">
+            <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}" onerror="this.src='default-group-avatar.png'">
             <h3>${group.name}</h3>
             <p>Members: ${group.members.length}</p>
+            <button class="delete-group-btn" data-group-id="${group._id}">Delete</button>
           </div>
         `).join('')}
       </div>
@@ -276,6 +270,12 @@ function attachGroupListeners() {
   document.querySelectorAll('.group-item').forEach(item => {
     item.addEventListener('click', () => openGroup(item.dataset.groupId));
   });
+  document.querySelectorAll('.delete-group-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteGroup(btn.dataset.groupId);
+    });
+  });
   document.getElementById('create-group-btn').addEventListener('click', showCreateGroupModal);
 }
 
@@ -286,7 +286,7 @@ async function openGroup(groupId) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
       <div class="group-header">
-        <img src="${group.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${group.name}">
+        <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}" onerror="this.src='default-group-avatar.png'">
         <h3>${group.name}</h3>
       </div>
       <div class="message-list" id="message-list">
@@ -330,6 +330,18 @@ function attachGroupMessageFormListener(groupId) {
   });
 }
 
+async function deleteGroup(groupId) {
+  if (confirm('Are you sure you want to delete this group?')) {
+    try {
+      await apiCall(`/groups/${groupId}`, 'DELETE');
+      loadGroups(); // Reload the groups list
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      alert('Failed to delete group. Please try again.');
+    }
+  }
+}
+
 function showCreateGroupModal() {
   const modal = document.getElementById('create-group-modal');
   modal.classList.add('show');
@@ -353,124 +365,29 @@ function showCreateGroupModal() {
 }
 
 function initializeSocket() {
-    socket = new WebSocket('ws://localhost:5000');
-    socket.addEventListener('open', () => {
-      console.log('Connected to WebSocket server');
-    });
-    socket.addEventListener('message', (event) => {
-      const data = JSON.parse(event.data);
-      switch (data.type) {
-        case 'new_message':
-          handleNewMessage(data.message);
-          break;
-        case 'user_status':
-          updateOnlineUserStatus(data.user);
-          break;
-        case 'typing':
-          handleTypingIndicator(data);
-          break;
-        case 'read_receipt':
-          handleReadReceipt(data);
-          break;
-      }
-    });
-    socket.addEventListener('close', () => {
-      console.log('Disconnected from WebSocket server');
-      setTimeout(initializeSocket, 5000);
-    });
-  }
-  
-  // New feature: File sharing
-  function setupFileSharing() {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.style.display = 'none';
-    fileInput.multiple = true;
-  
-    const fileBtn = document.createElement('button');
-    fileBtn.innerHTML = '📎';
-    fileBtn.className = 'file-share-btn';
-    fileBtn.onclick = () => fileInput.click();
-  
-    fileInput.onchange = async () => {
-      const files = Array.from(fileInput.files);
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        try {
-          const response = await apiCall('/messages/file', 'POST', formData);
-          handleNewMessage(response.message);
-        } catch (error) {
-          console.error('Error sending file:', error);
-          showToast(`Failed to send file: ${file.name}`, 'error');
-        }
-      }
-    };
-  
-    document.getElementById('message-form').prepend(fileBtn);
-    document.body.appendChild(fileInput);
-  }
-  
-  // New feature: Message reactions
-  function setupMessageReactions() {
-    document.getElementById('message-list').addEventListener('dblclick', (e) => {
-      const messageElement = e.target.closest('.message');
-      if (messageElement) {
-        const messageId = messageElement.dataset.messageId;
-        showReactionPicker(messageId, e.clientX, e.clientY);
-      }
-    });
-  }
-  
-  function showReactionPicker(messageId, x, y) {
-    const reactionPicker = document.createElement('div');
-    reactionPicker.className = 'reaction-picker';
-    reactionPicker.style.left = `${x}px`;
-    reactionPicker.style.top = `${y}px`;
-    reactionPicker.innerHTML = '👍 👎 😄 😢 😮 ❤️';
-  
-    reactionPicker.onclick = async (e) => {
-      if (e.target.textContent.trim()) {
-        try {
-          await apiCall(`/messages/${messageId}/react`, 'POST', { reaction: e.target.textContent });
-          updateMessageReactions(messageId, e.target.textContent);
-        } catch (error) {
-          console.error('Error adding reaction:', error);
-          showToast('Failed to add reaction', 'error');
-        }
-      }
-      document.body.removeChild(reactionPicker);
-    };
-  
-    document.body.appendChild(reactionPicker);
-  }
-  
-  function updateMessageReactions(messageId, reaction) {
-    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-    if (messageElement) {
-      let reactionsElement = messageElement.querySelector('.message-reactions');
-      if (!reactionsElement) {
-        reactionsElement = document.createElement('div');
-        reactionsElement.className = 'message-reactions';
-        messageElement.appendChild(reactionsElement);
-      }
-      const reactionElement = document.createElement('span');
-      reactionElement.textContent = reaction;
-      reactionsElement.appendChild(reactionElement);
+  socket = new WebSocket('ws://localhost:5000');
+  socket.addEventListener('open', () => {
+    console.log('Connected to WebSocket server');
+  });
+  socket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'new_message') {
+      handleNewMessage(data.message);
+    } else if (data.type === 'user_status') {
+      updateOnlineUserStatus(data.user);
     }
-  }
+  });
+  socket.addEventListener('close', () => {
+    console.log('Disconnected from WebSocket server');
+    setTimeout(initializeSocket, 5000); // Attempt to reconnect after 5 seconds
+  });
+}
 
 function handleNewMessage(message) {
   const messageList = document.getElementById('message-list');
   if (messageList) {
     messageList.insertAdjacentHTML('beforeend', createMessageElement(message));
     messageList.scrollTop = messageList.scrollHeight;
-  }
-  
-  // Show notification for new messages
-  if (message.sender !== currentUser.id) {
-    showNotification('New Message', `${message.senderName}: ${message.content}`);
   }
 }
 
@@ -484,7 +401,7 @@ function updateOnlineUserStatus(user) {
       const li = document.createElement('li');
       li.dataset.userId = user.id;
       li.innerHTML = `
-        <img src="${user.avatar}" alt="${user.username}">
+        <img src="${user.avatar || 'default-avatar.png'}" alt="${user.username}" onerror="this.src='default-avatar.png'">
         <span>${user.username}</span>
       `;
       onlineUsersList.appendChild(li);
@@ -512,7 +429,7 @@ function loadProfile() {
   contentArea.innerHTML = `
     <h2>Your Profile</h2>
     <div class="profile-info">
-      <img src="${currentUser.avatar || 'default-avatar.png'}" alt="${currentUser.username}" class="profile-avatar">
+      <img src="${currentUser.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${currentUser.username}" class="profile-avatar">
       <p><strong>Username:</strong> ${currentUser.username}</p>
       <p><strong>Email:</strong> ${currentUser.email}</p>
     </div>
