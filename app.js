@@ -1,3 +1,9 @@
+const MOCK_USERS = [
+  { id: '1', username: 'Harsh', online: true, lastOnline: new Date() },
+  { id: '2', username: 'Jaimin', online: false, lastOnline: new Date(Date.now() - 3600000) },
+  { id: '3', username: 'Swayam', online: true, lastOnline: new Date() }
+];
+
 const API_BASE_URL = 'http://localhost:5000/api';
 let token = localStorage.getItem('token');
 let currentUser = null;
@@ -142,22 +148,31 @@ async function loadOnlineUsers() {
 async function loadChats() {
   try {
     showLoadingSpinner();
-    const chats = await apiCall('/chats');
+    // const chats = await apiCall('/chats');
+    const chats = MOCK_USERS.map(user => ({
+      _id: user.id,
+      participants: [user],
+      lastMessage: `Last message with ${user.username}`,
+      updatedAt: user.lastOnline
+    }));
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
-            <h2>Your Chats</h2>
-            <div class="chat-list">
-                ${chats.map(chat => `
-                    <div class="chat-item" data-chat-id="${chat._id}">
-                        <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
-                        <div class="chat-info">
-                            <h3>${chat.participants[0].username}</h3>
-                            <p>${chat.lastMessage || 'No messages yet'}</p>
-                        </div>
-                    </div>
-                `).join('')}
+      <h2>Your Chats</h2>
+      <div class="chat-list">
+        ${chats.map(chat => `
+          <div class="chat-item" data-chat-id="${chat._id}">
+            <img src="${chat.participants[0].avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
+            <div class="chat-info">
+              <h3>${chat.participants[0].username}</h3>
+              <p>${chat.lastMessage || 'No messages yet'}</p>
+              <span class="online-status ${chat.participants[0].online ? 'online' : 'offline'}">
+                ${chat.participants[0].online ? 'Online' : 'Last seen: ' + new Date(chat.updatedAt).toLocaleString()}
+              </span>
             </div>
-        `;
+          </div>
+        `).join('')}
+      </div>
+    `;
     setActiveNavButton(document.getElementById('chat-btn'));
     attachChatListeners();
   } catch (error) {
@@ -497,13 +512,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadProfile() {
   const contentArea = document.getElementById('content-area');
   contentArea.innerHTML = `
-      <h2>Your Profile</h2>
-      <div class="profile-info">
-          <img src="${currentUser.avatar || 'default-avatar.png'}" alt="${currentUser.username}" class="profile-avatar">
-          <p><strong>Username:</strong> ${currentUser.username}</p>
-          <p><strong>Email:</strong> ${currentUser.email}</p>
-      </div>
-      <button id="edit-profile-btn" class="btn">Edit Profile</button>
+    <h2>Your Profile</h2>
+    <div class="profile-info">
+      <img src="${currentUser.avatar || 'default-avatar.png'}" alt="${currentUser.username}" class="profile-avatar" style="width: 100px; height: 100px;">
+      <p><strong>Username:</strong> <span id="profile-username">${currentUser.username}</span></p>
+      <p><strong>Email:</strong> <span id="profile-email">${currentUser.email}</span></p>
+    </div>
+    <button id="edit-profile-btn" class="btn">Edit Profile</button>
   `;
   setActiveNavButton(document.getElementById('profile-btn'));
   document.getElementById('edit-profile-btn').addEventListener('click', showEditProfileModal);
@@ -547,15 +562,15 @@ function showEditProfileModal() {
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
-      <div class="modal-content">
-          <h2>Edit Profile</h2>
-          <form id="edit-profile-form">
-              <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
-              <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
-              <input type="file" id="edit-avatar" accept="image/*">
-              <button type="submit">Save Changes</button>
-          </form>
-      </div>
+    <div class="modal-content">
+      <h2>Edit Profile</h2>
+      <form id="edit-profile-form">
+        <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
+        <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
+        <input type="file" id="edit-avatar" accept="image/*">
+        <button type="submit">Save Changes</button>
+      </form>
+    </div>
   `;
   document.body.appendChild(modal);
   modal.classList.add('show');
@@ -564,6 +579,7 @@ function showEditProfileModal() {
   editProfileForm.addEventListener('submit', handleEditProfileSubmit);
 }
 
+// Add the handleEditProfileSubmit function:
 async function handleEditProfileSubmit(e) {
   e.preventDefault();
   const username = document.getElementById('edit-username').value.trim();
@@ -588,6 +604,32 @@ async function handleEditProfileSubmit(e) {
     alert('Failed to update profile. Please try again.');
   } finally {
     hideLoadingSpinner();
+  }
+}
+
+// Add the updateProfile function:
+async function updateProfile(formData) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update profile');
+    }
+
+    const updatedUser = await response.json();
+    currentUser = updatedUser;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUI();
+    alert('Profile updated successfully');
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    alert('Failed to update profile. Please try again.');
   }
 }
 

@@ -522,3 +522,23 @@ body.dark-mode .message .timestamp {
         grid-template-columns: 1fr;
     }
 }
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+  
+  .online-status {
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  
+  .online-status.online {
+    color: green;
+  }
+  
+  .online-status.offline {
+    color: gray;
+  }
