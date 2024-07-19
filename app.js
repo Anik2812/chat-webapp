@@ -4,6 +4,19 @@ const MOCK_USERS = [
   { id: '3', username: 'Swayam', online: true, lastOnline: new Date() }
 ];
 
+const MOCK_CHATS = MOCK_USERS.map(user => ({
+  _id: user.id,
+  participants: [user],
+  messages: [{ sender: user.id, content: `Hello from ${user.username}`, timestamp: new Date() }],
+  lastMessage: `Hello from ${user.username}`,
+  updatedAt: user.lastOnline
+}));
+
+const MOCK_GROUPS = [
+  { _id: '1', name: 'General', members: MOCK_USERS, messages: [] },
+  { _id: '2', name: 'Work', members: [MOCK_USERS[0], MOCK_USERS[1]], messages: [] }
+];
+
 const API_BASE_URL = 'http://localhost:5000/api';
 let token = localStorage.getItem('token');
 let currentUser = null;
@@ -11,27 +24,26 @@ let socket = null;
 
 async function apiCall(endpoint, method = 'GET', body = null) {
   console.log(`Making ${method} request to ${endpoint}`);
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-  const config = { method, headers };
-  if (body) config.body = JSON.stringify(body);
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    if (!response.ok) {
-      if (response.status === 401) {
-        logout();
-        throw new Error('Session expired. Please login again.');
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("API call error:", error);
-    throw error;
+  if (endpoint === '/chats') {
+    return MOCK_CHATS;
+  } else if (endpoint.startsWith('/chats/')) {
+    const chatId = endpoint.split('/')[2];
+    return MOCK_CHATS.find(chat => chat._id === chatId);
+  } else if (endpoint === '/groups') {
+    return MOCK_GROUPS;
+  } else if (endpoint.startsWith('/groups/')) {
+    const groupId = endpoint.split('/')[2];
+    return MOCK_GROUPS.find(group => group._id === groupId);
+  } else if (endpoint === '/users/online') {
+    return MOCK_USERS.filter(user => user.online);
+  } else if (endpoint === '/users/profile' && method === 'PUT') {
+    currentUser = { ...currentUser, ...body };
+    return currentUser;
   }
+
+  throw new Error('Not found');
 }
 
 function showLoadingSpinner() {
@@ -53,6 +65,13 @@ function hideAuthModal() {
 }
 
 async function login(username, password) {
+  
+currentUser = {
+  id: '0',
+  username: 'CurrentUser',
+  email: 'currentuser@example.com',
+  avatar: 'default-avatar.png'
+};
   try {
     showLoadingSpinner();
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -148,13 +167,7 @@ async function loadOnlineUsers() {
 async function loadChats() {
   try {
     showLoadingSpinner();
-    // const chats = await apiCall('/chats');
-    const chats = MOCK_USERS.map(user => ({
-      _id: user.id,
-      participants: [user],
-      lastMessage: `Last message with ${user.username}`,
-      updatedAt: user.lastOnline
-    }));
+    const chats = await apiCall('/chats');
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
       <h2>Your Chats</h2>
@@ -196,18 +209,18 @@ async function openChat(chatId) {
     const chat = await apiCall(`/chats/${chatId}`);
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
-            <div class="chat-header">
-                <img src="${chat.avatar}" alt="${chat.username}">
-                <h3>${chat.username}</h3>
-            </div>
-            <div class="message-list" id="message-list">
-                ${chat.messages.map(message => createMessageElement(message)).join('')}
-            </div>
-            <form id="message-form">
-                <input type="text" id="message-input" placeholder="Type a message...">
-                <button type="submit">Send</button>
-            </form>
-        `;
+      <div class="chat-header">
+        <img src="${chat.participants[0].avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
+        <h3>${chat.participants[0].username}</h3>
+      </div>
+      <div class="message-list" id="message-list">
+        ${chat.messages.map(message => createMessageElement(message)).join('')}
+      </div>
+      <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type a message...">
+        <button type="submit">Send</button>
+      </form>
+    `;
     const messageList = document.getElementById('message-list');
     messageList.scrollTop = messageList.scrollHeight;
     attachMessageFormListener(chatId);
@@ -256,18 +269,18 @@ async function loadGroups() {
     const groups = await apiCall('/groups');
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
-            <h2>Your Groups</h2>
-            <div class="group-list">
-                ${groups.map(group => `
-                    <div class="group-item" data-group-id="${group._id}">
-                        <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
-                        <h3>${group.name}</h3>
-                        <p>Members: ${group.members.length}</p>
-                    </div>
-                `).join('')}
-            </div>
-            <button id="create-group-btn" class="create-btn">Create New Group</button>
-        `;
+      <h2>Your Groups</h2>
+      <div class="group-list">
+        ${groups.map(group => `
+          <div class="group-item" data-group-id="${group._id}">
+            <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+            <h3>${group.name}</h3>
+            <p>Members: ${group.members.length}</p>
+          </div>
+        `).join('')}
+      </div>
+      <button id="create-group-btn" class="create-btn">Create New Group</button>
+    `;
     setActiveNavButton(document.getElementById('groups-btn'));
     attachGroupListeners();
   } catch (error) {
@@ -292,18 +305,18 @@ async function openGroup(groupId) {
     const group = await apiCall(`/groups/${groupId}`);
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
-            <div class="group-header">
-                <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
-                <h3>${group.name}</h3>
-            </div>
-            <div class="message-list" id="message-list">
-                ${group.messages.map(message => createMessageElement(message)).join('')}
-            </div>
-            <form id="message-form">
-                <input type="text" id="message-input" placeholder="Type a message...">
-                <button type="submit">Send</button>
-            </form>
-        `;
+      <div class="group-header">
+        <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+        <h3>${group.name}</h3>
+      </div>
+      <div class="message-list" id="message-list">
+        ${group.messages.map(message => createMessageElement(message)).join('')}
+      </div>
+      <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type a message...">
+        <button type="submit">Send</button>
+      </form>
+    `;
     const messageList = document.getElementById('message-list');
     messageList.scrollTop = messageList.scrollHeight;
     attachGroupMessageFormListener(groupId);
@@ -431,19 +444,7 @@ async function deleteGroup(groupId) {
 
 async function updateProfile(formData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/profile`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update profile');
-    }
-
-    const updatedUser = await response.json();
+    const updatedUser = await apiCall('/users/profile', 'PUT', Object.fromEntries(formData));
     currentUser = updatedUser;
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
     updateUI();
