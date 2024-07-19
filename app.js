@@ -33,15 +33,15 @@ function hideLoadingSpinner() {
 }
 
 function showAuthModal() {
-    console.log("Showing auth modal");
-    document.getElementById('auth-modal').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
+  console.log("Showing auth modal");
+  document.getElementById('auth-modal').classList.add('show');
+  document.getElementById('app').style.display = 'none';
 }
 
 function hideAuthModal() {
+  console.log("Hiding auth modal");
   document.getElementById('auth-modal').classList.remove('show');
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('app').classList.add('loaded');
 }
 
 async function login(username, password) {
@@ -140,31 +140,32 @@ async function loadOnlineUsers() {
 
 async function loadChats() {
   try {
-    showLoadingSpinner();
-    const chats = await apiCall('/chats');
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = `
-      <h2>Your Chats</h2>
-      <div class="chat-list">
-        ${chats.map(chat => `
-          <div class="chat-item" data-chat-id="${chat._id}">
-            <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.participants[0].username}">
-            <div class="chat-info">
-              <h3>${chat.participants[0].username}</h3>
-              <p>${chat.lastMessage || 'No messages yet'}</p>
-            </div>
+      showLoadingSpinner();
+      const chats = await apiCall('/chats');
+      const contentArea = document.getElementById('content-area');
+      contentArea.innerHTML = `
+          <h2>Your Chats</h2>
+          <div class="chat-list">
+              ${chats.map(chat => `
+                  <div class="chat-item" data-chat-id="${chat._id}">
+                      <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.username}">
+                      <div class="chat-info">
+                          <h3>${chat.username}</h3>
+                          <p>${chat.lastMessage || 'No messages yet'}</p>
+                      </div>
+                  </div>
+              `).join('')}
           </div>
-        `).join('')}
-      </div>
-    `;
-    setActiveNavButton(document.getElementById('chat-btn'));
-    attachChatListeners();
+          <button id="new-chat-btn">Start New Chat</button>
+      `;
+      setActiveNavButton(document.getElementById('chat-btn'));
+      attachChatListeners();
   } catch (error) {
-    console.error('Error loading chats:', error);
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = '<p>Failed to load chats. Please try again later.</p>';
+      console.error('Error loading chats:', error);
+      const contentArea = document.getElementById('content-area');
+      contentArea.innerHTML = '<p>Failed to load chats. Please try again later.</p>';
   } finally {
-    hideLoadingSpinner();
+      hideLoadingSpinner();
   }
 }
 
@@ -176,32 +177,31 @@ function attachChatListeners() {
 
 async function openChat(chatId) {
   try {
-    showLoadingSpinner();
-    const chat = await apiCall(`/chats/${chatId}`);
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = `
-      <div class="chat-header">
-        <img src="${chat.avatar}" alt="${chat.username}">
-        <h3>${chat.username}</h3>
-      </div>
-      <div class="message-list" id="message-list">
-        ${chat.messages.map(message => createMessageElement(message)).join('')}
-      </div>
-      <form id="message-form">
-        <input type="text" id="message-input" placeholder="Type a message...">
-        <button type="submit">Send</button>
-      </form>
-    `;
-    const messageList = document.getElementById('message-list');
-    messageList.scrollTop = messageList.scrollHeight;
-    attachMessageFormListener(chatId);
-    implementInfiniteScroll(messageList, chatId);
+      showLoadingSpinner();
+      const chat = await apiCall(`/chats/${chatId}`);
+      const contentArea = document.getElementById('content-area');
+      contentArea.innerHTML = `
+          <div class="chat-header">
+              <img src="${chat.avatar || 'default-avatar.png'}" alt="${chat.username}">
+              <h3>${chat.username}</h3>
+          </div>
+          <div class="message-list" id="message-list">
+              ${chat.messages.map(message => createMessageElement(message)).join('')}
+          </div>
+          <form id="message-form">
+              <input type="text" id="message-input" placeholder="Type a message...">
+              <button type="submit">Send</button>
+          </form>
+      `;
+      const messageList = document.getElementById('message-list');
+      messageList.scrollTop = messageList.scrollHeight;
+      attachMessageFormListener(chatId);
   } catch (error) {
-    console.error('Error opening chat:', error);
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = '<p>Failed to load chat. Please try again later.</p>';
+      console.error('Error opening chat:', error);
+      const contentArea = document.getElementById('content-area');
+      contentArea.innerHTML = '<p>Failed to load chat. Please try again later.</p>';
   } finally {
-    hideLoadingSpinner();
+      hideLoadingSpinner();
   }
 }
 
@@ -253,7 +253,7 @@ async function loadGroups() {
       <div class="group-list">
         ${groups.map(group => `
           <div class="group-item" data-group-id="${group._id}">
-            <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+            <img src="${group.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${group.name}">
             <h3>${group.name}</h3>
             <p>Members: ${group.members.length}</p>
           </div>
@@ -286,7 +286,7 @@ async function openGroup(groupId) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
       <div class="group-header">
-        <img src="${group.avatar || 'default-group-avatar.png'}" alt="${group.name}">
+        <img src="${group.avatar || 'https://images.pexels.com/photos/18069859/pexels-photo-18069859/free-photo-of-an-artist-s-illustration-of-artificial-intelligence-ai-this-image-explores-how-humans-can-creatively-collaborate-with-artificial-general-intelligence-agi-in-the-future-and-how-it-can.png'}" alt="${group.name}">
         <h3>${group.name}</h3>
       </div>
       <div class="message-list" id="message-list">
@@ -559,64 +559,63 @@ function loadSettings() {
   
   function showEditProfileModal() {
     const modal = document.createElement('div');
-    modal.className = 'modal';
+    modal.className = 'modal show';
     modal.innerHTML = `
-      <div class="modal-content">
-        <h2>Edit Profile</h2>
-        <form id="edit-profile-form">
-          <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
-          <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
-          <input type="file" id="edit-avatar" accept="image/*">
-          <button type="submit">Save Changes</button>
-        </form>
-      </div>
+        <div class="modal-content">
+            <h2>Edit Profile</h2>
+            <form id="edit-profile-form">
+                <input type="text" id="edit-username" value="${currentUser.username}" placeholder="Username" required>
+                <input type="email" id="edit-email" value="${currentUser.email}" placeholder="Email" required>
+                <input type="file" id="edit-avatar" accept="image/*">
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
     `;
     document.body.appendChild(modal);
-    modal.classList.add('show');
-  
+
     const editProfileForm = document.getElementById('edit-profile-form');
     editProfileForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = document.getElementById('edit-username').value.trim();
-      const email = document.getElementById('edit-email').value.trim();
-      const avatarFile = document.getElementById('edit-avatar').files[0];
-  
-      try {
-        showLoadingSpinner();
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('email', email);
-        if (avatarFile) {
-          formData.append('avatar', avatarFile);
+        e.preventDefault();
+        const username = document.getElementById('edit-username').value.trim();
+        const email = document.getElementById('edit-email').value.trim();
+        const avatarFile = document.getElementById('edit-avatar').files[0];
+
+        try {
+            showLoadingSpinner();
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('email', email);
+            if (avatarFile) {
+                formData.append('avatar', avatarFile);
+            }
+
+            const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update profile');
+            }
+
+            const updatedUser = await response.json();
+            currentUser = updatedUser;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            updateUI();
+            loadProfile();
+            modal.remove();
+            showToast('Profile updated successfully', 'success');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            showToast('Failed to update profile. Please try again.', 'error');
+        } finally {
+            hideLoadingSpinner();
         }
-  
-        const response = await fetch(`${API_BASE_URL}/users/profile`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-  
-        if (!response.ok) {
-          throw new Error('Failed to update profile');
-        }
-  
-        const updatedUser = await response.json();
-        currentUser = updatedUser;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        updateUI();
-        loadProfile();
-        modal.classList.remove('show');
-        setTimeout(() => modal.remove(), 300);
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        alert('Failed to update profile. Please try again.');
-      } finally {
-        hideLoadingSpinner();
-      }
     });
-  }
+}
   
   function requestNotificationPermission() {
     if ('Notification' in window) {
@@ -649,7 +648,11 @@ function toggleTheme() {
       const picker = new EmojiPicker({
         onEmojiSelect: emoji => {
           const messageInput = document.getElementById('message-input');
+          if (messageInput) {
           messageInput.value += emoji.native;
+        } else {
+          console.log('Message input not found');
+      }
         }
       });
       picker.togglePicker(emojiBtn);
@@ -703,6 +706,19 @@ function toggleTheme() {
   
     document.getElementById('message-form').prepend(recordBtn);
   }
+
+  async function deleteGroup(groupId) {
+    if (await confirmAction('Are you sure you want to delete this group?')) {
+        try {
+            await apiCall(`/groups/${groupId}`, 'DELETE');
+            showToast('Group deleted successfully', 'success');
+            loadGroups(); // Reload the groups list
+        } catch (error) {
+            console.error('Error deleting group:', error);
+            showToast('Failed to delete group', 'error');
+        }
+    }
+}
   
   // New feature: Typing indicator
   let typingTimeout;
